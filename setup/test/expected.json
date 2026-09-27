@@ -1,0 +1,137 @@
+{
+  "_comment": "What each sample Program Guide should parse to. Checked by hand against the PDFs (Sep 2026). PDFs themselves are not committed \u2014 download current ones from wgu.edu.",
+  "BSCNE.pdf": {
+    "courses": 34,
+    "cu": 109,
+    "termColumns": 1,
+    "code": "BSCNE",
+    "has": [
+      "Internet of Things (IoT) and Infrastructure",
+      "Composition: Successful Self-Expression"
+    ]
+  },
+  "BSMES.pdf": {
+    "courses": 39,
+    "cu": 129,
+    "termColumns": 0,
+    "code": "BSMES",
+    "requirements": 2,
+    "has": [
+      "Student Teaching II in Secondary Education"
+    ]
+  },
+  "BSMKT.pdf": {
+    "courses": 37,
+    "cu": 112,
+    "termColumns": 1,
+    "code": "BSMKT",
+    "has": [
+      "Business Environment Applications I: Business Structures and Legal Environment"
+    ]
+  },
+  "BSNU.pdf": {
+    "courses": 23,
+    "cu": 120,
+    "termColumns": 2,
+    "code": null,
+    "transfer": 1,
+    "has": [
+      "Advanced Standing for RN License"
+    ]
+  },
+  "BSSESB.pdf": {
+    "courses": 41,
+    "cu": 124,
+    "termColumns": 0,
+    "code": "BSSESB",
+    "requirements": 2,
+    "has": [
+      "General Earth Science I Lab"
+    ]
+  },
+  "MATELED.pdf": {
+    "courses": 28,
+    "cu": 59,
+    "termColumns": 1,
+    "code": "MATELED",
+    "requirements": 2,
+    "has": [
+      "Education Portfolio",
+      "Student Teaching I in Elementary Education"
+    ],
+    "inPerson": {
+      "Early Clinical in Elementary Education": "Clinical",
+      "Advanced Clinical in Elementary Education": "Clinical",
+      "Student Teaching I in Elementary Education": "Student teaching",
+      "Student Teaching II in Elementary Education": "Student teaching"
+    }
+  },
+  "MSCIN.pdf": {
+    "courses": 10,
+    "cu": 32,
+    "termColumns": 0,
+    "code": "MSCIN",
+    "has": [
+      "MSCIN Capstone"
+    ]
+  },
+  "MSCSAIML.pdf": {
+    "courses": 10,
+    "cu": 31,
+    "termColumns": 1,
+    "code": "MSCSAIML",
+    "has": [
+      "Artificial Intelligence and Machine Learning Foundations"
+    ]
+  },
+  "MSCSIA.pdf": {
+    "courses": 11,
+    "cu": 36,
+    "termColumns": 1,
+    "code": "MSCSIA",
+    "codes": 11,
+    "has": [
+      "Human-Centric Risk in Cybersecurity",
+      "Governance, Risk, and Compliance in the Age of Artificial Intelligence"
+    ]
+  },
+  "MSHRM.pdf": {
+    "courses": 10,
+    "cu": 30,
+    "termColumns": 1,
+    "code": "MSHRM"
+  },
+  "BSPNTR.pdf": {
+    "courses": 34,
+    "cu": 120,
+    "termColumns": 1,
+    "code": "BSPNTR",
+    "sections": 2,
+    "maxGuideTerm": 8,
+    "has": [
+      "Basic Nursing Skills",
+      "Professional Nursing Role Transition",
+      "Women's and Children's Nursing"
+    ],
+    "inPerson": {},
+    "webList": {
+      "file": "web-list-bspntr.txt",
+      "matched": 15,
+      "marks": {
+        "Basic Nursing Skills": "Lab",
+        "Intermediate Nursing Skills": "Lab",
+        "Adult Health I": "Clinical",
+        "Adult Health II": "Clinical",
+        "Adult Health III": "Clinical",
+        "Women's and Children's Nursing": "Clinical",
+        "Psychiatric and Mental Health Nursing": "Clinical",
+        "Community Health and Population-Focused Nursing": "Clinical",
+        "Professional Nursing Role Transition": "Clinical"
+      },
+      "notInPerson": [
+        "Advanced Nursing Skills",
+        "Health Assessment"
+      ]
+    }
+  }
+}

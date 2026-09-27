@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>WGU Tracker Setup</title>
+<!--
+  setup.html — builds config.js from a WGU Program Guide PDF.
+
+  Runs entirely in the browser, straight from the file system (double-click
+  to open; no server, no install, no network). The PDF is read locally with
+  a vendored copy of pdf.js (setup/vendor/pdfjs) and never uploaded anywhere.
+
+  Flow: load PDF → parse-guide.js extracts the Standard Path table →
+  you review/edit courses, terms, requirements, budget → Download config.js.
+-->
+<style>
+  :root{
+    --bg:#f5f3ee; --surface:#ffffff; --surface-2:#eeebe3; --text:#1e2430; --muted:#5b6472;
+    --border:#dedad0; --accent:#1f4e5f; --accent-soft:#e4edf0; --gold:#a6791f; --gold-soft:#f3e8d2;
+    --ok:#2f7d4f; --ok-soft:#e3f2e8; --warn:#a6461f; --warn-soft:#f6e3da;
+    --money:#6b4fa0; --money-soft:#ece5f5;
+    --shadow: 0 1px 2px rgba(30,36,48,0.06), 0 6px 20px rgba(30,36,48,0.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#181d24; --surface:#20262f; --surface-2:#262d38; --text:#e7e9ee; --muted:#9aa2b1;
+      --border:#333c49; --accent:#7fb8cf; --accent-soft:#243642; --gold:#d9ad5c; --gold-soft:#3a2f1c;
+      --ok:#6fcf97; --ok-soft:#1e3126; --warn:#e8946c; --warn-soft:#3a251c;
+      --money:#b79ce0; --money-soft:#2c2438;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 20px rgba(0,0,0,0.35);
+    }
+  }
+  *{box-sizing:border-box;}
+  body{background:var(--bg); color:var(--text); margin:0; padding:0 16px; font-family:-apple-system,Segoe UI,sans-serif; font-size:15px; line-height:1.5;}
+  .wrap{max-width:960px; margin:0 auto; padding-block:28px 60px;}
+  h1,h2{font-family:Georgia,serif; margin:0;}
+  h1{font-size:28px; font-weight:600;}
+  h2{font-size:17px; font-weight:600; color:var(--accent);}
+  .eyebrow{text-transform:uppercase; letter-spacing:0.08em; font-size:11.5px; color:var(--muted); font-weight:600;}
+  .sub{color:var(--muted); font-size:14px; max-width:66ch; margin-top:8px;}
+  header{padding-bottom:20px; margin-bottom:22px; border-bottom:1px solid var(--border);}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:18px; box-shadow:var(--shadow);}
+  .card h2{margin-bottom:6px;}
+  .step{font-size:11.5px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:2px;}
+  .help{font-size:13px; color:var(--muted); margin:4px 0 12px;}
+  .hidden{display:none !important;}
+  .tabular{font-variant-numeric:tabular-nums;}
+
+  .drop{display:block; border:2px dashed var(--border); border-radius:12px; padding:26px 16px; text-align:center; cursor:pointer; background:var(--surface-2);}
+  .drop.over{border-color:var(--accent); background:var(--accent-soft);}
+  .drop strong{display:block; font-size:15px; margin-bottom:4px;}
+  .drop input{display:none;}
+
+  .msg{border-radius:10px; padding:10px 12px; font-size:13.5px; margin-top:12px;}
+  .msg.ok{background:var(--ok-soft); border:1px solid var(--ok);}
+  .msg.warn{background:var(--warn-soft); border:1px solid var(--warn);}
+  .msg ul{margin:6px 0 0; padding-left:18px;}
+
+  .summary{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-top:6px;}
+  .stat .label{font-size:11.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); font-weight:600;}
+  .stat .value{font-family:Georgia,serif; font-size:20px; font-weight:600;}
+
+  .fields{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px;}
+  label.field{display:flex; flex-direction:column; gap:4px; font-size:13px; font-weight:600;}
+  label.field span.hint{font-weight:400; color:var(--muted); font-size:12px;}
+  input[type=text], input[type=number], input[type=date], select, textarea{
+    font:inherit; font-size:14px; color:var(--text); background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; padding:6px 8px; width:100%;
+  }
+  input[type=number]{max-width:110px;}
+  .radio-row{display:flex; flex-direction:column; gap:8px; margin-top:4px;}
+  .radio-row label{display:flex; align-items:center; gap:8px; font-size:14px; flex-wrap:wrap;}
+  .radio-row input[type=number]{width:80px;}
+
+  .table-wrap{overflow-x:auto; margin-top:8px; border:1px solid var(--border); border-radius:10px;}
+  table{border-collapse:collapse; width:100%; min-width:720px; font-size:13.5px;}
+  th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); background:var(--surface-2); padding:8px; font-weight:600;}
+  td{padding:5px 6px; border-top:1px solid var(--border); vertical-align:top;}
+  td input[type=text]{padding:4px 6px; font-size:13.5px;}
+  td input[type=number]{padding:4px 6px; width:62px;}
+  td.notes{font-size:12px; color:var(--muted); max-width:260px;}
+  tr.is-transfer td{background:var(--gold-soft);}
+  .x-btn{border:1px solid var(--border); background:var(--surface-2); color:var(--muted); border-radius:50%; width:24px; height:24px; cursor:pointer; font-size:13px; line-height:1; padding:0;}
+  .term-chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;}
+  .chip{font-size:12px; background:var(--accent-soft); color:var(--accent); border-radius:99px; padding:3px 10px; font-weight:600;}
+  .chip.transfer{background:var(--gold-soft); color:var(--gold);}
+
+  .req{border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-top:8px; display:flex; gap:10px; align-items:flex-start;}
+  .req .req-body{flex:1; display:flex; flex-direction:column; gap:6px;}
+  .req textarea{min-height:52px; font-size:13px;}
+
+  button.primary{border:none; background:var(--accent); color:#fff; font:inherit; font-weight:600; border-radius:99px; padding:10px 20px; cursor:pointer;}
+  @media (prefers-color-scheme: dark){ button.primary{color:#10161c;} }
+  button.secondary{border:1px solid var(--border); background:var(--surface-2); color:var(--text); font:inherit; font-size:13px; font-weight:600; border-radius:99px; padding:6px 14px; cursor:pointer; margin-top:10px;}
+  ol.next{margin:10px 0 0; padding-left:20px; font-size:14px;}
+  code{background:var(--surface-2); padding:1px 5px; border-radius:4px; font-size:13px;}
+  footer{margin-top:30px; font-size:12px; color:var(--muted); text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">WGU Program Tracker · Setup</div>
+    <h1>Build your tracker from your Program Guide</h1>
+    <div class="sub">Load your program's Program Guide PDF, check what was read, adjust your plan, and download a <code>config.js</code> for the tracker. Everything happens in this page — your PDF is never uploaded anywhere.</div>
+  </header>
+
+  <!-- Step 1: load PDF ------------------------------------------------------>
+  <section class="card">
+    <div class="step">Step 1</div>
+    <h2>Load your Program Guide</h2>
+    <div class="help">Download it from your program's page on wgu.edu (look for "Program Guide"), or from your student portal. Use the version for your catalog year if you can.</div>
+    <label class="drop" id="drop">
+      <strong>Choose a Program Guide PDF</strong>
+      <span class="help">or drag and drop it here</span>
+      <input type="file" id="pdfInput" accept="application/pdf,.pdf">
+    </label>
+    <div id="loadMsg"></div>
+  </section>
+
+  <div id="afterLoad" class="hidden">
+
+    <!-- Step 2: check ------------------------------------------------------>
+    <section class="card">
+      <div class="step">Step 2</div>
+      <h2>Check what was found</h2>
+      <div class="summary" id="summary"></div>
+      <div id="warnBox"></div>
+    </section>
+
+    <!-- Step 3: plan -------------------------------------------------------->
+    <section class="card">
+      <div class="step">Step 3</div>
+      <h2>Your plan</h2>
+      <div class="fields" style="margin-top:10px;">
+        <label class="field">Tracker title
+          <input type="text" id="titleInput">
+        </label>
+        <label class="field">Tuition per 6-month term ($)
+          <input type="number" id="rateInput" min="0" step="1" placeholder="e.g. 4795">
+          <span class="hint">From WGU's tuition page for your program. Leave blank to hide the Budget card.</span>
+        </label>
+        <label class="field">Planned start date
+          <input type="date" id="startInput">
+          <span class="hint">Optional. Used to show each term's dates.</span>
+        </label>
+        <label class="field">Goal note
+          <input type="text" id="goalInput" placeholder="e.g. goal: finish in 3 terms">
+          <span class="hint">Optional. Shown under the title.</span>
+        </label>
+      </div>
+
+      <div style="margin-top:16px;">
+        <div class="field" style="font-size:13px; font-weight:600;">How should courses be split into terms?</div>
+        <div class="radio-row" id="termModeRow">
+          <label id="guideModeLabel"><input type="radio" name="termMode" value="guide" id="modeGuide">
+            <span>Use the guide's standard path</span>
+            <select id="columnSelect" class="hidden" style="width:auto;"></select>
+            <span class="help" id="guideModeHint" style="margin:0;"></span>
+          </label>
+          <label><input type="radio" name="termMode" value="target" id="modeTarget">
+            <span>Put at least</span>
+            <input type="number" id="cuTarget" min="1" max="60" step="1">
+            <span>CUs in each term, in guide order</span>
+            <span class="help" id="targetHint" style="margin:0;"></span>
+          </label>
+        </div>
+        <div class="help" style="margin-top:8px;">Changing this re-assigns every course's term below, replacing any terms you typed by hand.</div>
+      </div>
+    </section>
+
+    <!-- Step 4: courses ----------------------------------------------------->
+    <section class="card">
+      <div class="step">Step 4</div>
+      <h2>Courses</h2>
+      <div class="help">In the order they appear in the guide. Fix anything that was misread, tick <strong>Transfer</strong> for courses already covered by transfer credit, and change any course's term. Course codes are optional — most guides don't list them.</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Term</th><th>Course</th><th>Code</th><th>CUs</th><th>Transfer</th><th>In person</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="courseRows"></tbody>
+        </table>
+      </div>
+      <div class="term-chips" id="termChips"></div>
+      <button type="button" class="secondary" id="addCourseBtn">+ Add a course</button>
+
+      <details style="margin-top:16px;" id="webPasteBox">
+        <summary style="cursor:pointer; font-weight:600; font-size:14px;">Mark in-person courses from your program's web page (optional)</summary>
+        <div class="help" style="margin-top:8px;">Program Guides often don't say which courses have in-person clinicals or labs, but your program's page on wgu.edu may. Copy its course list (including any footnotes like "*This course includes … in-person clinical requirements") and paste it here. Only the <strong>In person</strong> column and notes change. Check the result before downloading.</div>
+        <textarea id="webPaste" style="min-height:140px; font-size:13px;" placeholder="Basic Nursing Skills (in-person learning lab experience)&#10;Adult Health I*&#10;*This course includes online coursework and in-person clinical requirements."></textarea>
+        <button type="button" class="secondary" id="webPasteBtn">Apply</button>
+        <div id="webPasteMsg"></div>
+      </details>
+    </section>
+
+    <!-- Step 5: requirements ------------------------------------------------>
+    <section class="card">
+      <div class="step">Step 5</div>
+      <h2>Program requirements (not courses)</h2>
+      <div class="help">Exams, licensure steps, clearances and anything else your program needs that isn't a course. Clinicals, student teaching and portfolios are usually real courses with CUs, so they appear in the course list above instead. Anything the guide mentioned is pre-filled; untick what doesn't apply to you.</div>
+      <div id="reqList"></div>
+      <button type="button" class="secondary" id="addReqBtn">+ Add a requirement</button>
+    </section>
+
+    <!-- Step 6: download ---------------------------------------------------->
+    <section class="card">
+      <div class="step">Step 6</div>
+      <h2>Download</h2>
+      <label style="display:flex; gap:8px; align-items:center; font-size:14px; margin:8px 0 14px;" id="includeWarnLabel">
+        <input type="checkbox" id="includeWarnings" checked> Show setup warnings as a note in the tracker
+      </label>
+      <button type="button" class="primary" id="downloadBtn">Download config.js</button>
+      <ol class="next">
+        <li>Move the downloaded <code>config.js</code> into the main tracker folder, next to <code>index.html</code>. Replace the old one if there is one.</li>
+        <li>Open <code>index.html</code>.</li>
+      </ol>
+      <div class="help" style="margin-top:10px;">Re-running setup later keeps your saved progress for any course whose name (or code) didn't change.</div>
+    </section>
+  </div>
+
+  <footer>Unofficial community tool. Not affiliated with WGU. Always confirm your plan with your program mentor.</footer>
+</div>
+
+<!-- pdf.js, vendored. Loading the worker as a normal script lets pdf.js run
+     on the main thread, which is what makes this page work from file://
+     (browsers block real Web Workers on file:// pages). -->
+<script src="vendor/pdfjs/pdf.min.js"></script>
+<script src="vendor/pdfjs/pdf.worker.min.js"></script>
+<script src="parse-guide.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var Parser = window.WGUGuideParser;
+  var parsed = null;        // raw parser result
+  var courses = [];         // editable rows: {name, code, cu, term, transfer, notes[], guideTerms[]}
+  var reqs = [];            // editable requirements: {id, name, note, keep}
+  var fileName = "";
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(ch){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[ch];
+    });
+  }
+  function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
+
+  // ---- Step 1: load & parse -----------------------------------------------
+
+  function showLoadMsg(kind, html){ $("loadMsg").innerHTML = '<div class="msg ' + kind + '">' + html + '</div>'; }
+
+  if (!window.pdfjsLib){
+    showLoadMsg("warn", "The PDF reader didn't load. Make sure the <code>setup/vendor/pdfjs</code> folder is next to this page.");
+  }
+
+  function readPdf(file){
+    if (!file) return;
+    fileName = file.name;
+    showLoadMsg("ok", "Reading " + escapeHtml(file.name) + "…");
+    var reader = new FileReader();
+    reader.onload = function(){
+      extractPages(new Uint8Array(reader.result)).then(function(pages){
+        parsed = Parser.parse(pages);
+        if (!parsed.courses.length){
+          showLoadMsg("warn", "<strong>No courses found.</strong> " + (parsed.warnings.map(escapeHtml).join(" ") || "") +
+            " This page only understands WGU Program Guide PDFs. You can still copy <code>config.example.js</code> to <code>config.js</code> and fill it in by hand.");
+          $("afterLoad").classList.add("hidden");
+          return;
+        }
+        showLoadMsg("ok", "Read <strong>" + escapeHtml(file.name) + "</strong> — found " + parsed.courses.length + " courses.");
+        initFromParse();
+      }).catch(function(err){
+        showLoadMsg("warn", "Couldn't read that PDF: " + escapeHtml(err && err.message || err));
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // Pull positioned text out of every page, in the shape parse-guide.js expects.
+  function extractPages(data){
+    // isEvalSupported:false — never compile code from font data (mitigates
+    // CVE-2024-4367 in this pdf.js version). We only need text anyway.
+    return pdfjsLib.getDocument({ data: data, isEvalSupported: false, disableFontFace: true }).promise.then(function(doc){
+      var jobs = [];
+      for (var p = 1; p <= doc.numPages; p++){
+        jobs.push(doc.getPage(p).then(function(page){ return page.getTextContent(); }).then(function(tc){
+          return { items: tc.items.map(function(it){ return { str: it.str, x: it.transform[4], y: it.transform[5], width: it.width }; }) };
+        }));
+      }
+      return Promise.all(jobs);
+    });
+  }
+
+  $("pdfInput").addEventListener("change", function(e){ readPdf(e.target.files[0]); e.target.value = ""; });
+  var drop = $("drop");
+  ["dragenter","dragover"].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add("over"); }); });
+  ["dragleave","drop"].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove("over"); }); });
+  drop.addEventListener("drop", function(e){ readPdf(e.dataTransfer.files[0]); });
+
+  // ---- Steps 2–5: populate the form ---------------------------------------
+
+  function initFromParse(){
+    courses = parsed.courses.map(function(c){
+      return { name: c.name, code: c.code, cu: c.cu, term: 1, transfer: c.transfer, notes: c.notes.slice(), guideTerms: c.guideTerms.slice(), inPerson: c.inPerson || "" };
+    });
+    reqs = parsed.requirements.map(function(r){ return { id: r.id, name: r.name, note: r.note, keep: true }; });
+
+    // Summary
+    var sum = courses.reduce(function(s,c){ return s + c.cu; }, 0);
+    var totalLabel = parsed.statedTotalCu === null ? (sum + " <span style='font-size:12px;color:var(--muted);font-weight:400'>(guide has no total to check against)</span>")
+      : (parsed.statedTotalCu === sum ? sum + " <span style='font-size:12px;color:var(--ok);font-weight:400'>✓ matches guide</span>"
+      : sum + " <span style='font-size:12px;color:var(--warn);font-weight:400'>guide says " + parsed.statedTotalCu + "</span>");
+    $("summary").innerHTML =
+      stat("Program", escapeHtml(parsed.programTitle || "—")) +
+      stat("Program code", escapeHtml(parsed.programCode || "not in guide")) +
+      stat("Catalog version", escapeHtml(parsed.catalogVersion || "not in guide")) +
+      stat("Courses", courses.length) +
+      stat("Total CUs", totalLabel);
+
+    var warnings = parsed.warnings.slice();
+    $("warnBox").innerHTML = warnings.length
+      ? '<div class="msg warn"><strong>Double-check these against the PDF:</strong><ul>' + warnings.map(function(w){ return "<li>" + escapeHtml(w) + "</li>"; }).join("") + "</ul></div>"
+      : '<div class="msg ok">No problems spotted. Still worth a quick look at the course list below.</div>';
+    $("includeWarnLabel").classList.toggle("hidden", !warnings.length);
+
+    // Plan fields
+    $("titleInput").value = (parsed.programCode ? parsed.programCode + " " : "") + "Tracker";
+    var hasGuideTerms = parsed.termColumns.length > 0;
+    $("modeGuide").disabled = !hasGuideTerms;
+    $("guideModeLabel").style.opacity = hasGuideTerms ? "" : "0.55";
+    $("guideModeHint").textContent = hasGuideTerms ? "" : "(this guide doesn't assign terms)";
+    var sel = $("columnSelect");
+    sel.innerHTML = "";
+    if (parsed.termColumns.length > 1){
+      parsed.termColumns.forEach(function(label, i){
+        var maxT = Math.max.apply(null, courses.map(function(c){ return c.guideTerms[i] || 0; }));
+        var o = document.createElement("option");
+        o.value = i; o.textContent = label + " (" + maxT + " terms)";
+        sel.appendChild(o);
+      });
+      sel.classList.remove("hidden");
+    } else {
+      sel.classList.add("hidden");
+    }
+    var minCu = parsed.minCuPerTerm;
+    $("cuTarget").value = minCu || 12;
+    $("targetHint").textContent = minCu
+      ? "(the guide says " + (parsed.level || "students") + " must enroll in at least " + minCu + " CUs per term)"
+      : "(couldn't find the guide's minimum — 12 is a placeholder, set your own)";
+    (hasGuideTerms ? $("modeGuide") : $("modeTarget")).checked = true;
+
+    applyTermMode();
+    renderReqs();
+    $("afterLoad").classList.remove("hidden");
+  }
+
+  function stat(label, value){ return '<div class="stat"><div class="label">' + label + '</div><div class="value tabular">' + value + '</div></div>'; }
+
+  function currentMode(){ return $("modeGuide").checked ? "guide" : "target"; }
+
+  function applyTermMode(){
+    var terms = Parser.assignTerms(courses, currentMode(), {
+      columnIndex: parseInt($("columnSelect").value || "0", 10),
+      cuPerTerm: parseInt($("cuTarget").value, 10) || 12
+    });
+    courses.forEach(function(c, i){ c.term = terms[i]; });
+    renderCourses();
+  }
+  ["modeGuide","modeTarget"].forEach(function(id){ $(id).addEventListener("change", applyTermMode); });
+  $("columnSelect").addEventListener("change", function(){ $("modeGuide").checked = true; applyTermMode(); });
+  $("cuTarget").addEventListener("input", function(){ $("modeTarget").checked = true; applyTermMode(); });
+
+  // ---- course table --------------------------------------------------------
+
+  function renderCourses(){
+    var tbody = $("courseRows");
+    tbody.innerHTML = "";
+    courses.forEach(function(c, i){
+      var tr = document.createElement("tr");
+      if (c.transfer) tr.className = "is-transfer";
+      tr.appendChild(cell(numInput(c.term, 1, 30, function(v){ c.term = v; renderChips(); })));
+      tr.appendChild(cell(textInput(c.name, function(v){ c.name = v; })));
+      var codeIn = textInput(c.code, function(v){ c.code = v.trim(); }); codeIn.style.width = "80px"; codeIn.placeholder = "—";
+      tr.appendChild(cell(codeIn));
+      tr.appendChild(cell(numInput(c.cu, 0, 60, function(v){ c.cu = v; renderChips(); })));
+      var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = c.transfer;
+      cb.title = "Already satisfied by transfer credit";
+      cb.addEventListener("change", function(){ c.transfer = cb.checked; tr.className = c.transfer ? "is-transfer" : ""; renderChips(); });
+      tr.appendChild(cell(cb));
+      var ipSel = document.createElement("select");
+      ipSel.style.width = "auto";
+      [""].concat(Parser.IN_PERSON_TYPES).forEach(function(t){
+        var o = document.createElement("option"); o.value = t; o.textContent = t || "—";
+        if (t === c.inPerson) o.selected = true;
+        ipSel.appendChild(o);
+      });
+      ipSel.title = "Does this course include an in-person part?";
+      ipSel.addEventListener("change", function(){ c.inPerson = ipSel.value; });
+      tr.appendChild(cell(ipSel));
+      var notes = document.createElement("td"); notes.className = "notes"; notes.textContent = c.notes.join(" ");
+      tr.appendChild(notes);
+      var del = document.createElement("button"); del.type = "button"; del.className = "x-btn"; del.textContent = "×"; del.title = "Remove this course";
+      del.addEventListener("click", function(){ courses.splice(i, 1); renderCourses(); });
+      tr.appendChild(cell(del));
+      tbody.appendChild(tr);
+    });
+    renderChips();
+  }
+  function cell(el){ var td = document.createElement("td"); td.appendChild(el); return td; }
+  function textInput(value, onChange){
+    var el = document.createElement("input"); el.type = "text"; el.value = value;
+    el.addEventListener("input", function(){ onChange(el.value); });
+    return el;
+  }
+  function numInput(value, min, max, onChange){
+    var el = document.createElement("input"); el.type = "number"; el.min = min; el.max = max; el.step = 1; el.value = value;
+    el.addEventListener("input", function(){ var v = parseInt(el.value, 10); if (!isNaN(v)) onChange(v); });
+    return el;
+  }
+  function renderChips(){
+    var byTerm = {}, transferCu = 0;
+    courses.forEach(function(c){
+      if (c.transfer){ transferCu += c.cu; return; }
+      byTerm[c.term] = (byTerm[c.term] || 0) + c.cu;
+    });
+    var html = Object.keys(byTerm).map(Number).sort(function(a,b){ return a-b; }).map(function(t){
+      return '<span class="chip tabular">Term ' + t + ': ' + byTerm[t] + ' CU</span>';
+    }).join("");
+    if (transferCu) html += '<span class="chip transfer tabular">Transfer: ' + transferCu + ' CU</span>';
+    $("termChips").innerHTML = html;
+  }
+  $("addCourseBtn").addEventListener("click", function(){
+    var lastTerm = courses.length ? courses[courses.length - 1].term : 1;
+    courses.push({ name: "New course", code: "", cu: 3, term: lastTerm, transfer: false, notes: ["Added by hand."], guideTerms: [], inPerson: "" });
+    renderCourses();
+  });
+
+  $("webPasteBtn").addEventListener("click", function(){
+    var res = Parser.readWebCourseList($("webPaste").value, courses);
+    var marked = 0;
+    res.marks.forEach(function(m){
+      var c = courses[m.index];
+      if (m.inPerson){ c.inPerson = m.inPerson; marked++; }
+      if (m.note && c.notes.indexOf(m.note) === -1) c.notes.push(m.note);
+    });
+    renderCourses();
+    var kind = res.matchedLines ? "ok" : "warn";
+    var html = res.matchedLines
+      ? "Matched " + res.matchedLines + " of your courses by name and marked " + marked + " as in person."
+      : "None of the pasted lines matched a course name from the guide. The course names on the web page have to match the guide's names.";
+    if (res.matchedLines && !res.starMeaning && /\*/.test($("webPaste").value)){
+      kind = "warn";
+      html += " Couldn't find a footnote explaining the asterisks, so starred courses were marked \"Field experience\". Change them in the table if that's wrong.";
+    }
+    $("webPasteMsg").innerHTML = '<div class="msg ' + kind + '">' + html + '</div>';
+  });
+
+  // ---- requirements ----------------------------------------------------------
+
+  function renderReqs(){
+    var list = $("reqList");
+    list.innerHTML = "";
+    if (!reqs.length){
+      list.innerHTML = '<div class="help">Nothing found in this guide. Add your own if your program has any.</div>';
+      return;
+    }
+    reqs.forEach(function(r){
+      var box = document.createElement("div"); box.className = "req";
+      var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = r.keep; cb.title = "Include in tracker";
+      cb.addEventListener("change", function(){ r.keep = cb.checked; box.style.opacity = r.keep ? "" : "0.5"; });
+      box.appendChild(cb);
+      var body = document.createElement("div"); body.className = "req-body";
+      body.appendChild(textInput(r.name, function(v){ r.name = v; }));
+      var ta = document.createElement("textarea"); ta.value = r.note; ta.placeholder = "Optional note";
+      ta.addEventListener("input", function(){ r.note = ta.value; });
+      body.appendChild(ta);
+      box.appendChild(body);
+      if (!r.keep) box.style.opacity = "0.5";
+      list.appendChild(box);
+    });
+  }
+  $("addReqBtn").addEventListener("click", function(){
+    reqs.push({ id: "custom-" + Date.now().toString(36), name: "New requirement (e.g. background check)", note: "", keep: true });
+    renderReqs();
+  });
+
+  // ---- Step 6: build & download config.js ------------------------------------
+
+  function buildConfig(){
+    var usable = courses.filter(function(c){ return c.name.trim(); });
+    var maxTerm = Math.max.apply(null, usable.map(function(c){ return c.term || 1; }).concat([1]));
+    var planOptions = [];
+    for (var t = maxTerm; t >= Math.max(1, maxTerm - 2); t--){
+      planOptions.push({ value: String(t), label: t + "-term " + (t === maxTerm ? "plan" : "stretch"), terms: t });
+    }
+
+    var notes = [];
+    var today = new Date().toISOString().slice(0, 10);
+    notes.push({
+      mark: "i",
+      html: "<p>Course list generated from the <strong>" + escapeHtml(parsed.programTitle || "WGU") + "</strong> Program Guide" +
+            (parsed.catalogVersion ? " (catalog " + escapeHtml(parsed.catalogVersion) + ")" : "") + " on " + today +
+            ". Terms are your own plan, not WGU's. Requirements change, so re-check with your program mentor.</p>"
+    });
+    notes.push({
+      mark: "?", color: "var(--money)", bg: "var(--money-soft)",
+      html: "<p><strong>Assessment types aren't in the Program Guide.</strong> Every course starts as \"Type: unknown\". Click the pill to set OA (exam) or PA (paper/project) once you can see the course.</p>"
+    });
+    if ($("includeWarnings").checked && parsed.warnings.length){
+      notes.push({
+        mark: "!", color: "var(--gold)", bg: "var(--gold-soft)",
+        html: "<p><strong>Setup flagged these while reading the PDF:</strong></p><p>" + parsed.warnings.map(escapeHtml).join("</p><p>") + "</p>"
+      });
+    }
+
+    return {
+      eyebrow: "WGU · " + (parsed.programTitle || "Program"),
+      programName: $("titleInput").value.trim() || "Program Tracker",
+      goalNote: $("goalInput").value.trim() || undefined,
+      footerNote: "Built from your WGU Program Guide with the setup page. Unofficial. Course requirements, transfer rules and tuition can change, so re-verify with your program mentor.",
+      storageKey: slug(parsed.programCode || parsed.programTitle || "program"),
+      ratePerTerm: parseInt($("rateInput").value, 10) || 0,
+      termMonths: 6,
+      startDate: $("startInput").value || null,
+      planOptions: planOptions,
+      notes: notes,
+      requirements: reqs.filter(function(r){ return r.keep && r.name.trim(); }).map(function(r){
+        return { id: r.id, name: r.name.trim(), note: r.note.trim() };
+      }),
+      courses: usable.map(function(c){
+        return {
+          term: c.term || 1,
+          code: c.code || "",
+          name: c.name.trim(),
+          cu: c.cu,
+          prereq: "",
+          notes: c.notes,
+          cert: null,
+          transfer: !!c.transfer,
+          inPerson: (!c.transfer && c.inPerson) ? c.inPerson : null,
+          assess: c.transfer ? { type: "n/a", guess: false, tasks: 0 } : { type: "unknown", guess: false, tasks: 1 }
+        };
+      })
+    };
+  }
+
+  $("downloadBtn").addEventListener("click", function(){
+    var cfg = buildConfig();
+    var text =
+      "// ============================================================================\n" +
+      "// WGU Program Tracker config — generated by setup/setup.html on " + new Date().toISOString().slice(0, 10) + "\n" +
+      "// from: " + fileName.replace(/[\r\n]/g, " ") + "\n" +
+      "// Safe to hand-edit. See config.example.js for what every field does.\n" +
+      "// ============================================================================\n\n" +
+      "window.WGU_TRACKER_CONFIG = " + JSON.stringify(cfg, null, 2) + ";\n";
+    var blob = new Blob([text], { type: "text/javascript" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "config.js";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  });
+
+  // Exposed for the automated browser test only.
+  window.__setupTest = { buildConfig: buildConfig, readPdf: readPdf, get courses(){ return courses; } };
+})();
+</script>
+</body>
+</html>

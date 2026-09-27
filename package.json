@@ -1,0 +1,24 @@
+{
+  "name": "wgu-degree-tracker",
+  "private": true,
+  "description": "Developer tooling only (lint, tests, CI). The tracker itself needs no npm, no install and no build: just open index.html.",
+  "license": "MIT",
+  "scripts": {
+    "lint": "eslint .",
+    "test": "node setup/test/unit-tests.js && node setup/test/validate-configs.js",
+    "test:guides": "node setup/test/run-tests.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-html": "^8.2.1",
+    "globals": "^17.12.0",
+    "pdfjs-dist": "3.11.174"
+  },
+  "overrides": {
+    "canvas": "^3.2.0"
+  },
+  "_comment_overrides": "canvas: pdfjs-dist 3.11.174 optionally wants canvas 2.x, which pulls in @mapbox/node-pre-gyp -> tar (critical/high advisories). 3.x dropped that chain. See DECISIONS.md."
+}

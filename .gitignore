@@ -1,0 +1,5 @@
+node_modules/
+# Program Guide PDFs are WGU documents; keep them out of the repo
+*.pdf
+# progress exports are personal; config.js is NOT ignored because GitHub Pages needs it
+*-progress.json

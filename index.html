@@ -1,0 +1,881 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>WGU Program Tracker</title>
+<style>
+  :root{
+    --bg:#f5f3ee; --surface:#ffffff; --surface-2:#eeebe3; --text:#1e2430; --muted:#5b6472;
+    --border:#dedad0; --accent:#1f4e5f; --accent-soft:#e4edf0; --gold:#a6791f; --gold-soft:#f3e8d2;
+    --ok:#2f7d4f; --ok-soft:#e3f2e8; --progress:#3b6fa0; --progress-soft:#e5eef7;
+    --idle:#8a8f98; --idle-soft:#eceef0; --money:#6b4fa0; --money-soft:#ece5f5;
+    --shadow: 0 1px 2px rgba(30,36,48,0.06), 0 6px 20px rgba(30,36,48,0.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#181d24; --surface:#20262f; --surface-2:#262d38; --text:#e7e9ee; --muted:#9aa2b1;
+      --border:#333c49; --accent:#7fb8cf; --accent-soft:#243642; --gold:#d9ad5c; --gold-soft:#3a2f1c;
+      --ok:#6fcf97; --ok-soft:#1e3126; --progress:#8fbde3; --progress-soft:#1f3145;
+      --idle:#9098a5; --idle-soft:#2a2f38; --money:#b79ce0; --money-soft:#2c2438;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 20px rgba(0,0,0,0.35);
+    }
+  }
+  *{box-sizing:border-box;}
+  body{background:var(--bg); color:var(--text); margin:0; padding:0 16px; font-family:-apple-system,Segoe UI,sans-serif; font-size:15px; line-height:1.5;}
+  .wrap{max-width:880px;margin:0 auto;padding-block:28px 60px;}
+  h1,h2,h3{font-family:Georgia,serif; margin:0;}
+  .tabular{font-variant-numeric:tabular-nums;}
+  header.top{display:flex; flex-direction:column; gap:14px; padding-bottom:20px; margin-bottom:22px; border-bottom:1px solid var(--border);}
+  .eyebrow{text-transform:uppercase; letter-spacing:0.08em; font-size:11.5px; color:var(--muted); font-weight:600;}
+  h1{font-size:28px; font-weight:600; color:var(--text);}
+  .sub{color:var(--muted); font-size:14px; max-width:62ch;}
+  .progress-shell{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:10px;}
+  .progress-row{display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap;}
+  .progress-num{font-family:Georgia,serif; font-size:26px; font-weight:600;}
+  .progress-label{color:var(--muted); font-size:13px;}
+  .bar-track{height:10px; border-radius:99px; background:var(--surface-2); overflow:hidden;}
+  .bar-fill{height:100%; background:linear-gradient(90deg, var(--progress), var(--ok)); border-radius:99px; transition:width .4s ease;}
+  .legend{display:flex; gap:16px; flex-wrap:wrap; font-size:12.5px; color:var(--muted);}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .callout{border:1px solid var(--ok); background:var(--ok-soft); border-radius:12px; padding:14px 16px; margin-bottom:14px; display:flex; gap:12px;}
+  .callout .mark{color:var(--ok); font-family:Georgia,serif; font-weight:700; font-size:15px; flex:none;}
+  .callout p{margin:0 0 6px 0; font-size:13.8px;}
+  .callout p:last-child{margin-bottom:0;}
+  .notes-section{margin-bottom:4px;}
+  .notes-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;}
+  .notes-head h2{font-size:16px; font-weight:600; color:var(--accent);}
+  .notes-section.collapsed #notesBody{display:none;}
+  .notes-section.collapsed{margin-bottom:20px;}
+  .collapse-btn{border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:11.5px; font-weight:600; border-radius:99px; padding:5px 12px; cursor:pointer; flex:none; font-family:inherit;}
+  .budget{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px 18px; margin-bottom:24px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:14px;}
+  .budget-head{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+  .budget-head h2{font-size:16px; font-weight:600; color:var(--money);}
+  .budget.collapsed #budgetBody{display:none;}
+  .plan-toggle{display:flex; border:1px solid var(--border); border-radius:99px; padding:2px; background:var(--surface-2); flex:none; flex-wrap:wrap;}
+  .plan-toggle button{border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; padding:6px 12px; border-radius:99px; cursor:pointer; font-family:inherit;}
+  .plan-toggle button.active{background:var(--money); color:#fff;}
+  .budget-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px;}
+  .budget-stat{display:flex; flex-direction:column; gap:2px;}
+  .budget-stat .label{font-size:11.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); font-weight:600;}
+  .budget-stat .value{font-family:Georgia,serif; font-size:22px; font-weight:600;}
+  .budget-stat .value.money{color:var(--money);}
+  .term-pay-row{display:flex; align-items:center; justify-content:space-between; gap:10px; border-top:1px solid var(--border); padding-top:12px; flex-wrap:wrap;}
+  .term-pay{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .term-pay .tname{font-weight:600; font-size:13.5px;}
+  .term-pay .tcost{font-size:12.5px; color:var(--muted);}
+  .pay-btn{border:1px solid var(--border); background:var(--idle-soft); color:var(--idle); font-size:11.5px; font-weight:600; border-radius:99px; padding:4px 11px; cursor:pointer; flex:none; font-family:inherit;}
+  .pay-btn[data-paid="paid"]{background:var(--ok-soft); color:var(--ok); border-color:var(--ok);}
+  .savings-note{font-size:12.5px; color:var(--muted); background:var(--money-soft); border-radius:8px; padding:8px 10px;}
+  .savings-note strong{color:var(--money);}
+  .term{margin-bottom:26px;}
+  .term-head{display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:4px; flex-wrap:wrap;}
+  .term-head h2{font-size:17px; font-weight:600; color:var(--accent);}
+  .term-meta{font-size:12.5px; color:var(--muted);}
+  .term-dates{font-size:12px; color:var(--muted); margin-bottom:10px; font-variant-numeric:tabular-nums;}
+  .course{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:13px 15px; margin-bottom:8px; box-shadow:var(--shadow);}
+  .course.is-transfer{border-color:var(--gold); background:var(--gold-soft);}
+  .course.is-inprogress{border-color:var(--progress); background:var(--progress-soft);}
+  .course.is-complete{border-color:var(--ok); background:var(--ok-soft);}
+  .course-row{display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+  .course-name{font-weight:600; font-size:14.5px; flex:1 1 220px; min-width:0;}
+  .course-code{color:var(--muted); font-size:12px; font-weight:400;}
+  .cu-badge{font-size:11.5px; color:var(--muted); background:var(--surface-2); border-radius:6px; padding:2px 7px; flex:none; font-variant-numeric:tabular-nums;}
+  .inperson-badge{font-size:11.5px; background:var(--progress-soft); color:var(--progress); border-radius:6px; padding:2px 7px; flex:none; font-weight:600; border:1px solid var(--progress);}
+  .add-btn{border:1px dashed var(--border); background:transparent; color:var(--muted); font-size:11px; font-weight:600; border-radius:99px; padding:2px 9px; cursor:pointer; font-family:inherit;}
+  .add-btn:hover{color:var(--progress); border-color:var(--progress);}
+  .cert-badge{font-size:11.5px; background:var(--surface); color:var(--gold); border-radius:6px; padding:2px 7px; flex:none; font-weight:600; border:1px solid var(--gold);}
+  .status-btn{border:1px solid var(--border); background:var(--idle-soft); color:var(--idle); font-size:12px; font-weight:600; border-radius:99px; padding:5px 12px; cursor:pointer; flex:none; font-family:inherit;}
+  .status-btn[data-status="in-progress"]{background:var(--progress-soft); color:var(--progress); border-color:var(--progress);}
+  .status-btn[data-status="complete"]{background:var(--ok-soft); color:var(--ok); border-color:var(--ok);}
+  .status-btn[disabled]{cursor:default; opacity:0.85;}
+  .course-note{font-size:12.5px; color:var(--muted); margin-top:6px; padding-left:2px;}
+  .meta-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:9px; padding-top:9px; border-top:1px dashed var(--border);}
+  .meta-label{font-size:11px; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); font-weight:600; flex:none;}
+  .mini-btn{border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:11.5px; font-weight:600; border-radius:99px; padding:4px 10px; cursor:pointer; flex:none; font-family:inherit;}
+  .mini-btn[data-status="in-progress"], .mini-btn[data-status="scheduled"]{background:var(--progress-soft); color:var(--progress); border-color:var(--progress);}
+  .mini-btn[data-status="complete"]{background:var(--ok-soft); color:var(--ok); border-color:var(--ok);}
+  .item-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px;}
+  .item-row .mini-btn{font-size:11px; padding:3px 9px;}
+  .mini-btn[data-atype="objective"]{background:var(--accent-soft); color:var(--accent); border-color:var(--accent);}
+  .mini-btn[data-atype="performance"]{background:var(--money-soft); color:var(--money); border-color:var(--money);}
+  .mini-btn.guess{border-style:dashed;}
+  .mini-btn.guess::after{content:" (unconfirmed)"; font-weight:400; opacity:0.8;}
+  .stepper{display:inline-flex; align-items:center; gap:5px; flex:none;}
+  .stepper button{width:20px; height:20px; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text); cursor:pointer; font-size:12px; line-height:1; font-family:inherit; padding:0;}
+  .stepper .n{font-size:12px; font-weight:600; min-width:14px; text-align:center;}
+  .na-note{font-size:12px; color:var(--muted); font-style:italic; margin-top:9px; padding-top:9px; border-top:1px dashed var(--border);}
+  .prep-box{margin-top:9px; padding:10px 12px; border-radius:10px; background:var(--accent-soft); border:1px solid var(--accent);}
+  .prep-box .prep-head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;}
+  .prep-box .prep-title{font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--accent);}
+  .prep-box a.prep-link{font-size:12px; font-weight:600; color:var(--accent); text-decoration:underline;}
+  .prep-box ul{margin:0; padding-left:16px; font-size:12.5px; color:var(--text);}
+  .prep-box li{margin-bottom:3px;}
+  .prep-box li:last-child{margin-bottom:0;}
+  .data-bar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end; margin-bottom:14px;}
+  .data-bar button, .data-bar label{border:1px solid var(--border); background:var(--surface-2); color:var(--muted); font-size:11.5px; font-weight:600; border-radius:99px; padding:5px 12px; cursor:pointer; font-family:inherit;}
+  .data-bar input[type=file]{display:none;}
+  .setup-warning{border:1px solid var(--gold); background:var(--gold-soft); border-radius:12px; padding:16px 18px; font-size:13.8px;}
+  .setup-warning code{background:var(--surface); padding:1px 5px; border-radius:4px;}
+  footer{margin-top:30px; font-size:12px; color:var(--muted); text-align:center;}
+  a{color:var(--accent);}
+  @media (max-width:480px){ h1{font-size:23px;} .course-row{gap:8px;} .course-name{flex-basis:140px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow" id="eyebrowEl">WGU Program</div>
+    <h1 id="titleEl">Program Tracker</h1>
+    <div class="sub" id="subEl"></div>
+    <div class="progress-shell">
+      <div class="progress-row">
+        <div>
+          <div class="progress-num tabular"><span id="cuDone">0</span> / <span id="cuTotal">0</span> CUs</div>
+          <div class="progress-label" id="progressLabel">Not started yet</div>
+        </div>
+        <div class="legend">
+          <span><span class="dot" style="background:var(--idle)"></span>Not started</span>
+          <span><span class="dot" style="background:var(--progress)"></span>In progress</span>
+          <span><span class="dot" style="background:var(--ok)"></span>Complete</span>
+        </div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%;"></div></div>
+    </div>
+  </header>
+
+  <div class="data-bar">
+    <label for="importInput">Import progress<input id="importInput" type="file" accept="application/json"></label>
+    <button type="button" id="exportBtn">Export progress</button>
+  </div>
+
+  <div id="setupWarning"></div>
+
+  <div class="notes-section" id="notesSection">
+    <div class="notes-head">
+      <h2>Notes</h2>
+      <button type="button" class="collapse-btn" id="notesCollapseBtn" aria-expanded="true">Hide</button>
+    </div>
+    <div id="notesBody"></div>
+  </div>
+
+  <div class="budget" id="budgetCard">
+    <div class="budget-head">
+      <h2>Budget</h2>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <div class="plan-toggle" id="planToggle"></div>
+        <button type="button" class="collapse-btn" id="budgetCollapseBtn" aria-expanded="true">Hide</button>
+      </div>
+    </div>
+    <div id="budgetBody">
+      <div class="budget-grid">
+        <div class="budget-stat"><div class="label">Rate</div><div class="value tabular" id="rateVal">—</div></div>
+        <div class="budget-stat"><div class="label">Terms planned</div><div class="value tabular" id="termsPlannedVal">—</div></div>
+        <div class="budget-stat"><div class="label">Planned total</div><div class="value money tabular" id="totalCostVal">—</div></div>
+        <div class="budget-stat"><div class="label">Paid so far</div><div class="value tabular" id="paidVal">—</div></div>
+      </div>
+      <div id="termPayRows"></div>
+      <div class="savings-note" id="savingsNote"></div>
+    </div>
+  </div>
+
+  <div class="term" id="requirementsSection" style="display:none;">
+    <div class="term-head">
+      <h2>Program requirements</h2>
+      <span class="term-meta" id="reqMeta"></span>
+    </div>
+    <div class="term-dates">Things your program needs that aren't courses and don't carry CUs — exams, licensure steps, clearances.</div>
+    <div id="requirementsList"></div>
+  </div>
+
+  <div id="terms"></div>
+
+  <footer id="footerEl">Unofficial community tracker. Course requirements, transfer rules, and tuition can change — re-verify with your program mentor.</footer>
+</div>
+
+<script src="config.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var CONFIG = window.WGU_TRACKER_CONFIG || null;
+  var setupWarningEl = document.getElementById("setupWarning");
+
+  if (!CONFIG || !Array.isArray(CONFIG.courses) || CONFIG.courses.length === 0){
+    setupWarningEl.innerHTML =
+      '<div class="setup-warning"><strong>No <code>config.js</code> found.</strong> Either open <code>setup/setup.html</code> and load your WGU Program Guide PDF, or copy <code>config.example.js</code> to <code>config.js</code> and edit it. Put <code>config.js</code> in this folder, next to <code>index.html</code>, then reload this page.</div>';
+    return;
+  }
+
+  var COURSES = CONFIG.courses;
+  var STATUSES = ["not-started","in-progress","complete"];
+  var STATUS_LABEL = {"not-started":"Not started","in-progress":"In progress","complete":"Complete"};
+  var ITEM_STATUSES = ["not-started","scheduled","complete"];
+  var ITEM_STATUS_LABEL = {"not-started":"Not started","scheduled":"Scheduled","complete":"Complete"};
+  var ATYPES = ["unknown","objective","performance"];
+  var ATYPE_LABEL = {"unknown":"Type: unknown","objective":"OA (exam)","performance":"PA (paper/project)","n/a":"No assessment — transfer credit"};
+
+  var RATE = CONFIG.ratePerTerm || 0;
+  var TERM_MONTHS = CONFIG.termMonths || 6;
+  var START_DATE = CONFIG.startDate ? new Date(CONFIG.startDate + "T00:00:00") : null;
+  var PLAN_OPTIONS = (CONFIG.planOptions && CONFIG.planOptions.length) ? CONFIG.planOptions : [{value:"default", label:"Planned terms", terms:Math.max.apply(null, COURSES.map(function(c){return c.term||1;}))}];
+  var TOTAL_CU = COURSES.reduce(function(s,c){return s+(c.cu||0);},0);
+
+  var STORAGE_KEY = "wgu-tracker:" + (CONFIG.storageKey || slug(CONFIG.programName || "program"));
+  var REQUIREMENTS = Array.isArray(CONFIG.requirements) ? CONFIG.requirements : [];
+
+  function slug(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
+
+  // Every course needs a stable key for saved progress. Use the WGU course
+  // code when the config has one; many Program Guides don't list codes, so
+  // fall back to a slug of the course name. Duplicates get a numeric suffix.
+  (function assignKeys(){
+    var used = {};
+    COURSES.forEach(function(c){
+      if (!c.assess) c.assess = { type: "unknown", guess: false, tasks: 1 };
+      var base = c.code ? String(c.code) : slug(c.name || "course");
+      var key = base, n = 2;
+      while (used[key]) key = base + "-" + (n++);
+      used[key] = true;
+      c._key = key;
+    });
+    REQUIREMENTS.forEach(function(r, i){ r._key = "req_" + (r.id || slug(r.name || "requirement") || i); });
+  })();
+
+  function addMonths(date, months){ return new Date(date.getFullYear(), date.getMonth() + months, date.getDate()); }
+  function termStart(termIndex){ return START_DATE ? addMonths(START_DATE, (termIndex - 1) * TERM_MONTHS) : null; }
+  function termEnd(termIndex){
+    if (!START_DATE) return null;
+    var end = addMonths(termStart(termIndex), TERM_MONTHS);
+    end.setDate(end.getDate() - 1);
+    return end;
+  }
+  function fmtDate(d){ return d.toLocaleDateString("en-US", {month:"short", day:"numeric", year:"numeric"}); }
+  function termRangeLabel(termIndex){
+    if (!START_DATE) return null;
+    return fmtDate(termStart(termIndex)) + " – " + fmtDate(termEnd(termIndex));
+  }
+
+  function freshItems(type, count){
+    if (type === "objective") return [{status:"not-started"}];
+    if (type === "performance") {
+      var arr = [];
+      for (var i=0;i<(count||1);i++) arr.push({status:"not-started"});
+      return arr;
+    }
+    return [];
+  }
+
+  // In-person part of a course (clinical, lab, student teaching...). It comes
+  // from config.js, but a student can also add, change or remove it right on
+  // the course card without re-running setup. That choice is saved with their
+  // progress as "<key>_iptype" and wins over config.js.
+  // "" = no in-person part.
+  var IN_PERSON_TYPES = ["Clinical", "Lab", "Student teaching", "Field experience"];
+  function ipType(c){
+    var override = state[c._key + "_iptype"];
+    if (typeof override === "string" && (override === "" || IN_PERSON_TYPES.indexOf(override) !== -1)) return override;
+    return c.inPerson || "";
+  }
+
+  // ---- state: localStorage, with export/import for backup or moving devices ----
+  var state = loadState();
+
+  function defaultState(){
+    var s = {};
+    COURSES.forEach(function(c){
+      s[c._key + "_mat"] = "not-started";
+      s[c._key + "_assess"] = {type:c.assess.type, guess:c.assess.guess};
+      s[c._key + "_items"] = freshItems(c.assess.type, c.assess.tasks);
+      s[c._key + "_inperson"] = "not-started";
+    });
+    REQUIREMENTS.forEach(function(r){ s[r._key] = "not-started"; });
+    s.__plan = PLAN_OPTIONS[0].value;
+    s.__pay = {};
+    s.__budgetCollapsed = false;
+    s.__notesCollapsed = !(CONFIG.notes && CONFIG.notes.length);
+    return s;
+  }
+
+  // Merge saved values over the defaults, then repair anything malformed.
+  // Used both for localStorage and for imported files, so a bad or
+  // hand-edited file can never leave the page in a state render() chokes on.
+  function mergeState(saved){
+    var s = defaultState();
+    if (saved && typeof saved === "object"){
+      Object.keys(saved).forEach(function(k){ if (k !== "__meta") s[k] = saved[k]; });
+    }
+    COURSES.forEach(function(c){
+      var k = c._key;
+      if (STATUSES.indexOf(s[k + "_mat"]) === -1) s[k + "_mat"] = "not-started";
+      var a = s[k + "_assess"];
+      if (!a || typeof a !== "object" || (ATYPES.indexOf(a.type) === -1 && a.type !== "n/a")) {
+        s[k + "_assess"] = {type:c.assess.type, guess:c.assess.guess};
+      }
+      var items = s[k + "_items"];
+      if (!Array.isArray(items) || items.some(function(i){ return !i || ITEM_STATUSES.indexOf(i.status) === -1; })){
+        s[k + "_items"] = freshItems(s[k + "_assess"].type, c.assess.tasks);
+      }
+      if (ITEM_STATUSES.indexOf(s[k + "_inperson"]) === -1) s[k + "_inperson"] = "not-started";
+      var ipt = s[k + "_iptype"];
+      if (ipt !== undefined && (typeof ipt !== "string" || (ipt !== "" && IN_PERSON_TYPES.indexOf(ipt) === -1))) delete s[k + "_iptype"];
+    });
+    REQUIREMENTS.forEach(function(r){
+      if (STATUSES.indexOf(s[r._key]) === -1) s[r._key] = "not-started";
+    });
+    if (!s.__pay || typeof s.__pay !== "object") s.__pay = {};
+    if (!PLAN_OPTIONS.some(function(o){ return o.value === s.__plan; })) s.__plan = PLAN_OPTIONS[0].value;
+    return s;
+  }
+
+  function loadState(){
+    var saved = null;
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) saved = JSON.parse(raw);
+    } catch(e) { /* localStorage unavailable (private mode, etc.) or corrupt — fall back to defaults */ }
+    return mergeState(saved);
+  }
+
+  // How many of this config's courses/requirements a saved-progress object
+  // knows about. Used to catch importing a file from a different program.
+  function matchCount(saved){
+    var n = 0;
+    COURSES.forEach(function(c){ if (saved[c._key + "_mat"] !== undefined) n++; });
+    REQUIREMENTS.forEach(function(r){ if (saved[r._key] !== undefined) n++; });
+    return n;
+  }
+
+  function persist(){
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch(e) { /* storage full or unavailable — progress still holds for this page load */ }
+  }
+
+  document.getElementById("exportBtn").addEventListener("click", function(){
+    var out = {};
+    Object.keys(state).forEach(function(k){ out[k] = state[k]; });
+    out.__meta = { storageKey: STORAGE_KEY, programName: CONFIG.programName || "", exportedAt: new Date().toISOString() };
+    var blob = new Blob([JSON.stringify(out, null, 2)], {type:"application/json"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = slug(CONFIG.programName || "wgu-tracker") + "-progress.json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById("importInput").addEventListener("change", function(ev){
+    var file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var incoming;
+      try { incoming = JSON.parse(reader.result); }
+      catch(e){ alert("That file isn't valid JSON, so it can't be a progress export. Nothing was changed."); return; }
+      if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)){
+        alert("That file doesn't look like a progress export. Nothing was changed."); return;
+      }
+      var fromOther = incoming.__meta && incoming.__meta.storageKey && incoming.__meta.storageKey !== STORAGE_KEY;
+      var matched = matchCount(incoming);
+      if (matched === 0){
+        alert("None of the courses in that file match this tracker's courses, so it's probably from a different program. Nothing was changed."); return;
+      }
+      if (fromOther || matched < COURSES.length + REQUIREMENTS.length){
+        var msg = (fromOther ? "This export came from a different tracker (" + (incoming.__meta.programName || incoming.__meta.storageKey) + "). " : "") +
+          "It has progress for " + matched + " of this tracker's " + (COURSES.length + REQUIREMENTS.length) + " items. " +
+          "Import anyway? Items it doesn't cover will reset to Not started.";
+        if (!confirm(msg)) return;
+      }
+      state = mergeState(incoming);
+      persist();
+      render();
+    };
+    reader.readAsText(file);
+    ev.target.value = "";
+  });
+
+  function computeStatus(c){
+    if (c.transfer) return "complete";
+    var mat = state[c._key + "_mat"];
+    var items = state[c._key + "_items"];
+    var hasItems = items.length > 0;
+    // A course with an in-person part (clinical, lab, student teaching...)
+    // isn't complete until that part is complete too.
+    var ip = ipType(c) ? state[c._key + "_inperson"] : "complete";
+    if (hasItems && items.every(function(i){ return i.status === "complete"; }) && ip === "complete") return "complete";
+    var anyItemActive = items.some(function(i){ return i.status !== "not-started"; });
+    var ipActive = !!ipType(c) && state[c._key + "_inperson"] !== "not-started";
+    if (mat === "in-progress" || mat === "complete" || anyItemActive || ipActive) return "in-progress";
+    return "not-started";
+  }
+  function statusPriority(c){
+    var st = computeStatus(c);
+    if (st === "in-progress") return 0;
+    if (st === "not-started") return 1;
+    return 2;
+  }
+
+  function money(n){ return "$" + (n||0).toLocaleString("en-US"); }
+
+  var termsEl = document.getElementById("terms");
+  var payRowsEl = document.getElementById("termPayRows");
+
+  // header
+  document.getElementById("eyebrowEl").textContent = CONFIG.eyebrow || "WGU Program";
+  document.getElementById("titleEl").textContent = CONFIG.programName || "Program Tracker";
+  document.getElementById("footerEl").textContent = CONFIG.footerNote || "Unofficial community tracker. Course requirements, transfer rules, and tuition can change — re-verify with your program mentor.";
+
+  function renderSub(){
+    var transferCU = COURSES.reduce(function(s,c){return s+(c.transfer?c.cu:0);},0);
+    var bits = [TOTAL_CU + " competency units"];
+    if (transferCU) bits.push(transferCU + " covered by transfer credit");
+    var inPersonCount = COURSES.filter(function(c){ return ipType(c) && !c.transfer; }).length;
+    if (inPersonCount) bits.push(inPersonCount + (inPersonCount === 1 ? " course has" : " courses have") + " an in-person part");
+    if (START_DATE) bits.push("planned start " + fmtDate(START_DATE));
+    if (CONFIG.goalNote) bits.push(CONFIG.goalNote);
+    bits.push("course status is computed from Materials + Assessment progress below");
+    document.getElementById("subEl").textContent = bits.join(" · ");
+  }
+  renderSub();
+
+  // notes (config-driven, optional)
+  var notesSectionEl = document.getElementById("notesSection");
+  var notesBodyEl = document.getElementById("notesBody");
+  if (!CONFIG.notes || !CONFIG.notes.length){
+    notesSectionEl.style.display = "none";
+  } else {
+    notesBodyEl.innerHTML = CONFIG.notes.map(function(n){
+      var style = n.color ? (' style="border-color:' + n.color + '; background:' + (n.bg||'') + ';"') : "";
+      var markStyle = n.color ? (' style="color:' + n.color + ';"') : "";
+      return '<div class="callout"' + style + '><div class="mark"' + markStyle + '>' + (n.mark || "•") + '</div><div>' + n.html + '</div></div>';
+    }).join("");
+  }
+  document.getElementById("notesCollapseBtn").addEventListener("click", function(){
+    state.__notesCollapsed = !state.__notesCollapsed; render(); persist();
+  });
+
+  // plan toggle (config-driven term-count options)
+  var planToggleEl = document.getElementById("planToggle");
+  PLAN_OPTIONS.forEach(function(opt){
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.dataset.plan = opt.value;
+    btn.textContent = opt.label;
+    btn.addEventListener("click", function(){ state.__plan = opt.value; render(); persist(); });
+    planToggleEl.appendChild(btn);
+  });
+  document.getElementById("budgetCollapseBtn").addEventListener("click", function(){
+    state.__budgetCollapsed = !state.__budgetCollapsed; render(); persist();
+  });
+  if (!RATE) document.getElementById("budgetCard").style.display = "none";
+
+  function currentPlanOption(){
+    return PLAN_OPTIONS.filter(function(o){ return o.value === state.__plan; })[0] || PLAN_OPTIONS[0];
+  }
+
+  function renderBudget(){
+    if (!RATE) return;
+    var plan = currentPlanOption();
+    var termsPlanned = plan.terms;
+    var total = termsPlanned * RATE;
+    var paid = 0;
+    for (var i=1;i<=termsPlanned;i++){ if (state.__pay["term" + i] === "paid") paid += RATE; }
+
+    var budgetCard = document.getElementById("budgetCard");
+    var collapseBtn = document.getElementById("budgetCollapseBtn");
+    budgetCard.className = "budget" + (state.__budgetCollapsed ? " collapsed" : "");
+    collapseBtn.textContent = state.__budgetCollapsed ? "Show" : "Hide";
+    collapseBtn.setAttribute("aria-expanded", state.__budgetCollapsed ? "false" : "true");
+
+    Array.prototype.forEach.call(planToggleEl.children, function(btn){
+      btn.className = btn.dataset.plan === state.__plan ? "active" : "";
+    });
+
+    document.getElementById("rateVal").innerHTML = money(RATE) + "<span style=\"font-size:12px;color:var(--muted);font-weight:400;\"> / term</span>";
+    document.getElementById("termsPlannedVal").textContent = termsPlanned;
+    document.getElementById("totalCostVal").textContent = money(total);
+    document.getElementById("paidVal").textContent = money(paid);
+
+    payRowsEl.innerHTML = "";
+    for (var t=1;t<=termsPlanned;t++){
+      (function(idx){
+        var row = document.createElement("div");
+        row.className = "term-pay-row";
+        var left = document.createElement("div");
+        left.className = "term-pay";
+        var range = termRangeLabel(idx);
+        left.innerHTML = "<span class='tname'>Term " + idx + "</span><span class='tcost tabular'>" + money(RATE) + "</span>" + (range ? "<span class='tcost tabular'>" + range + "</span>" : "");
+        row.appendChild(left);
+        var btn = document.createElement("button");
+        btn.className = "pay-btn";
+        btn.type = "button";
+        var key = "term" + idx;
+        btn.dataset.paid = state.__pay[key] || "unpaid";
+        btn.textContent = state.__pay[key] === "paid" ? "Paid" : "Mark paid";
+        btn.addEventListener("click", function(){
+          state.__pay[key] = state.__pay[key] === "paid" ? "unpaid" : "paid";
+          render(); persist();
+        });
+        row.appendChild(btn);
+        payRowsEl.appendChild(row);
+      })(t);
+    }
+
+    var note = document.getElementById("savingsNote");
+    var cheapest = PLAN_OPTIONS.reduce(function(a,b){ return b.terms < a.terms ? b : a; }, PLAN_OPTIONS[0]);
+    if (cheapest.terms < termsPlanned){
+      var savings = (termsPlanned - cheapest.terms) * RATE;
+      note.innerHTML = "Landing everything in <strong>" + cheapest.label + "</strong> instead would save " + money(savings) + " — WGU bills a flat rate per " + TERM_MONTHS + "-month term regardless of how many CUs you finish in it, so compressing terms is the only lever that changes total cost.";
+      note.style.display = "";
+    } else {
+      note.style.display = "none";
+    }
+  }
+
+  function render(){
+    notesSectionEl.className = "notes-section" + (state.__notesCollapsed ? " collapsed" : "");
+    document.getElementById("notesCollapseBtn").textContent = state.__notesCollapsed ? "Show" : "Hide";
+    document.getElementById("notesCollapseBtn").setAttribute("aria-expanded", state.__notesCollapsed ? "false" : "true");
+
+    termsEl.innerHTML = "";
+    var plan = currentPlanOption();
+    var termNums = [];
+    for (var i=1;i<=plan.terms;i++) termNums.push(i);
+    // A plan with fewer terms than the config uses folds every later course
+    // into the plan's last term (e.g. a 2-term stretch of a 3-term config
+    // shows term-3 courses under Term 2). Previously only the 1-term plan did
+    // this and middle plans silently dropped courses.
+    function effectiveTerm(c){ return Math.min(c.term || 1, plan.terms); }
+
+    termNums.forEach(function(t){
+      var group = COURSES.filter(function(c){ return effectiveTerm(c) === t; });
+      var pulledForward = group.filter(function(c){ return (c.term || 1) > t; }).length;
+
+      group = group
+        .map(function(c, i){ return {c:c, i:i}; })
+        .sort(function(x,y){ var d = statusPriority(x.c) - statusPriority(y.c); return d !== 0 ? d : x.i - y.i; })
+        .map(function(w){ return w.c; });
+
+      var termCU = group.reduce(function(s,c){return s+c.cu;},0);
+      var termDone = group.reduce(function(s,c){return s + (computeStatus(c)==="complete" ? c.cu : 0);},0);
+
+      var termDiv = document.createElement("div");
+      termDiv.className = "term";
+      var head = document.createElement("div");
+      head.className = "term-head";
+      head.innerHTML = "<h2>Term " + t + "</h2><span class='term-meta'>" + termDone + " / " + termCU + " CUs complete</span>";
+      termDiv.appendChild(head);
+
+      if (pulledForward){
+        var pulledLine = document.createElement("div");
+        pulledLine.className = "term-dates";
+        pulledLine.textContent = "Includes " + pulledForward + (pulledForward === 1 ? " course" : " courses") + " pulled forward from later terms to fit the " + plan.label + ".";
+        termDiv.appendChild(pulledLine);
+      }
+      if (!group.length){
+        var emptyLine = document.createElement("div");
+        emptyLine.className = "term-dates";
+        emptyLine.textContent = "No courses assigned to this term in config.js.";
+        termDiv.appendChild(emptyLine);
+      }
+
+      var range = termRangeLabel(t);
+      if (range){
+        var datesLine = document.createElement("div");
+        datesLine.className = "term-dates";
+        datesLine.textContent = range + " (planned)";
+        termDiv.appendChild(datesLine);
+      }
+
+      group.forEach(function(c){
+        var status = computeStatus(c);
+        var cardClass = "course";
+        if (c.transfer) cardClass += " is-transfer";
+        else if (status === "complete") cardClass += " is-complete";
+        else if (status === "in-progress") cardClass += " is-inprogress";
+
+        var card = document.createElement("div");
+        card.className = cardClass;
+        var row = document.createElement("div");
+        row.className = "course-row";
+
+        var nameWrap = document.createElement("div");
+        nameWrap.className = "course-name";
+        nameWrap.appendChild(document.createTextNode(c.name + " "));
+        if (c.code){
+          var codeSpan = document.createElement("span");
+          codeSpan.className = "course-code";
+          codeSpan.textContent = "(" + c.code + ")";
+          nameWrap.appendChild(codeSpan);
+        }
+        row.appendChild(nameWrap);
+
+        var cuBadge = document.createElement("span");
+        cuBadge.className = "cu-badge tabular";
+        cuBadge.textContent = c.cu + " CU";
+        row.appendChild(cuBadge);
+
+        var cType = ipType(c);
+        if (cType && !c.transfer){
+          var ipBadge = document.createElement("span");
+          ipBadge.className = "inperson-badge";
+          ipBadge.textContent = "In person: " + cType;
+          row.appendChild(ipBadge);
+        }
+
+        if (c.cert){
+          var certBadge = document.createElement("span");
+          certBadge.className = "cert-badge";
+          certBadge.textContent = c.cert + " transfer";
+          row.appendChild(certBadge);
+        }
+
+        var badge = document.createElement("button");
+        badge.className = "status-btn";
+        badge.type = "button";
+        badge.disabled = true;
+        badge.dataset.status = status;
+        badge.textContent = c.transfer ? "Transfer credit" : STATUS_LABEL[status];
+        row.appendChild(badge);
+        card.appendChild(row);
+
+        if (c.prereq){
+          var note = document.createElement("div");
+          note.className = "course-note";
+          note.textContent = c.prereq;
+          card.appendChild(note);
+        }
+        (Array.isArray(c.notes) ? c.notes : []).forEach(function(text){
+          var extra = document.createElement("div");
+          extra.className = "course-note";
+          extra.textContent = text;
+          card.appendChild(extra);
+        });
+
+        if (c.transfer){
+          var naNote = document.createElement("div");
+          naNote.className = "na-note";
+          naNote.textContent = "No materials or assessment to track — covered by transfer credit.";
+          card.appendChild(naNote);
+        } else {
+          var meta = document.createElement("div");
+          meta.className = "meta-row";
+
+          var matLabel = document.createElement("span");
+          matLabel.className = "meta-label";
+          matLabel.textContent = "Materials";
+          meta.appendChild(matLabel);
+
+          var matBtn = document.createElement("button");
+          matBtn.className = "mini-btn";
+          matBtn.type = "button";
+          matBtn.dataset.status = state[c._key + "_mat"];
+          matBtn.textContent = STATUS_LABEL[state[c._key + "_mat"]];
+          matBtn.addEventListener("click", function(code){
+            return function(){
+              var idx = STATUSES.indexOf(state[code + "_mat"]);
+              state[code + "_mat"] = STATUSES[(idx + 1) % STATUSES.length];
+              render(); persist();
+            };
+          }(c._key));
+          meta.appendChild(matBtn);
+
+          var aLabel = document.createElement("span");
+          aLabel.className = "meta-label";
+          aLabel.textContent = "Assessment type";
+          meta.appendChild(aLabel);
+
+          var a = state[c._key + "_assess"];
+          var aBtn = document.createElement("button");
+          aBtn.className = "mini-btn" + (a.guess ? " guess" : "");
+          aBtn.type = "button";
+          aBtn.dataset.atype = a.type;
+          aBtn.textContent = ATYPE_LABEL[a.type];
+          aBtn.addEventListener("click", function(code){
+            return function(){
+              var st = state[code + "_assess"];
+              var idx = ATYPES.indexOf(st.type);
+              st.type = ATYPES[(idx + 1) % ATYPES.length];
+              st.guess = false;
+              state[code + "_items"] = freshItems(st.type, 1);
+              render(); persist();
+            };
+          }(c._key));
+          meta.appendChild(aBtn);
+          card.appendChild(meta);
+
+          var items = state[c._key + "_items"];
+          if (items.length > 0){
+            var itemRow = document.createElement("div");
+            itemRow.className = "item-row";
+            items.forEach(function(item, idx){
+              var itemBtn = document.createElement("button");
+              itemBtn.className = "mini-btn";
+              itemBtn.type = "button";
+              itemBtn.dataset.status = item.status;
+              var kindLabel = a.type === "objective" ? "Exam" : ("Task " + (idx + 1));
+              itemBtn.textContent = kindLabel + ": " + ITEM_STATUS_LABEL[item.status];
+              itemBtn.addEventListener("click", function(code, i){
+                return function(){
+                  var arr = state[code + "_items"];
+                  var sidx = ITEM_STATUSES.indexOf(arr[i].status);
+                  arr[i].status = ITEM_STATUSES[(sidx + 1) % ITEM_STATUSES.length];
+                  render(); persist();
+                };
+              }(c._key, idx));
+              itemRow.appendChild(itemBtn);
+            });
+            if (a.type === "performance"){
+              var stepper = document.createElement("span");
+              stepper.className = "stepper";
+              var minus = document.createElement("button");
+              minus.type = "button"; minus.textContent = "−";
+              minus.addEventListener("click", function(code){
+                return function(){ var arr = state[code + "_items"]; if (arr.length > 1) arr.pop(); render(); persist(); };
+              }(c._key));
+              var n = document.createElement("span");
+              n.className = "n tabular";
+              n.textContent = items.length + (items.length === 1 ? " task" : " tasks");
+              var plus = document.createElement("button");
+              plus.type = "button"; plus.textContent = "+";
+              plus.addEventListener("click", function(code){
+                return function(){ var arr = state[code + "_items"]; if (arr.length < 9) arr.push({status:"not-started"}); render(); persist(); };
+              }(c._key));
+              stepper.appendChild(minus); stepper.appendChild(n); stepper.appendChild(plus);
+              itemRow.appendChild(stepper);
+            }
+            card.appendChild(itemRow);
+          }
+
+          // In-person row. With a part set: its type (click to change/remove)
+          // and its own status. Without one: a quiet "+ In-person part" button.
+          var ipRow = document.createElement("div");
+          ipRow.className = "item-row";
+          var ipLabel = document.createElement("span");
+          ipLabel.className = "meta-label";
+          ipLabel.textContent = "In person";
+          var typeBtn = document.createElement("button");
+          typeBtn.type = "button";
+          typeBtn.className = cType ? "mini-btn" : "add-btn";
+          typeBtn.textContent = cType ? cType : "+ In-person part";
+          typeBtn.title = cType ? "Click to change the type, or remove it after the last one" : "Mark that this course has a clinical, lab, student teaching or other in-person part";
+          typeBtn.addEventListener("click", function(course){
+            return function(){
+              // Cycle: none -> Clinical -> Lab -> Student teaching -> Field experience -> none
+              var cycle = [""].concat(IN_PERSON_TYPES);
+              var next = cycle[(cycle.indexOf(ipType(course)) + 1) % cycle.length];
+              state[course._key + "_iptype"] = next;
+              render(); persist();
+            };
+          }(c));
+          if (cType){
+            ipRow.appendChild(ipLabel);
+            ipRow.appendChild(typeBtn);
+            var ipBtn = document.createElement("button");
+            ipBtn.className = "mini-btn";
+            ipBtn.type = "button";
+            var ipSt = state[c._key + "_inperson"];
+            ipBtn.dataset.status = ipSt;
+            ipBtn.textContent = ITEM_STATUS_LABEL[ipSt];
+            ipBtn.title = "Status of the in-person part";
+            ipBtn.addEventListener("click", function(key){
+              return function(){
+                var i = ITEM_STATUSES.indexOf(state[key + "_inperson"]);
+                state[key + "_inperson"] = ITEM_STATUSES[(i + 1) % ITEM_STATUSES.length];
+                render(); persist();
+              };
+            }(c._key));
+            ipRow.appendChild(ipBtn);
+          } else {
+            ipRow.appendChild(typeBtn);
+          }
+          card.appendChild(ipRow);
+
+          if (c.prep && c.prep.length){
+            c.prep.forEach(function(p){
+              var prepBox = document.createElement("div");
+              prepBox.className = "prep-box";
+              var head2 = document.createElement("div");
+              head2.className = "prep-head";
+              var title = document.createElement("span");
+              title.className = "prep-title"; title.textContent = "How to prepare";
+              head2.appendChild(title);
+              var link = document.createElement("a");
+              link.className = "prep-link"; link.href = p.url; link.target = "_blank"; link.rel = "noopener noreferrer";
+              link.textContent = p.source || "Source";
+              head2.appendChild(link);
+              prepBox.appendChild(head2);
+              var ul = document.createElement("ul");
+              (p.notes || []).forEach(function(n){ var li = document.createElement("li"); li.textContent = n; ul.appendChild(li); });
+              prepBox.appendChild(ul);
+              card.appendChild(prepBox);
+            });
+          }
+        }
+        termDiv.appendChild(card);
+      });
+      termsEl.appendChild(termDiv);
+    });
+
+    var doneCU = COURSES.reduce(function(s,c){ return s + (computeStatus(c)==="complete" ? c.cu : 0); },0);
+    document.getElementById("cuDone").textContent = doneCU;
+    document.getElementById("cuTotal").textContent = TOTAL_CU;
+    var pct = TOTAL_CU ? Math.round((doneCU/TOTAL_CU)*100) : 0;
+    document.getElementById("barFill").style.width = pct + "%";
+    document.getElementById("progressLabel").textContent = doneCU === 0 ? "Not started yet" :
+      (doneCU === TOTAL_CU ? "Program complete" : pct + "% of the way through");
+
+    renderBudget();
+    renderRequirements();
+    renderSub();
+  }
+
+  // Non-course requirements (config.requirements). Tracked with a simple
+  // status cycle; they don't count toward CUs.
+  function renderRequirements(){
+    var section = document.getElementById("requirementsSection");
+    var list = document.getElementById("requirementsList");
+    if (!REQUIREMENTS.length){ section.style.display = "none"; return; }
+    section.style.display = "";
+    list.innerHTML = "";
+    var done = 0;
+    REQUIREMENTS.forEach(function(r){
+      var st = state[r._key];
+      if (st === "complete") done++;
+      var card = document.createElement("div");
+      card.className = "course" + (st === "complete" ? " is-complete" : st === "in-progress" ? " is-inprogress" : "");
+      var row = document.createElement("div");
+      row.className = "course-row";
+      var name = document.createElement("div");
+      name.className = "course-name";
+      name.textContent = r.name || "Requirement";
+      row.appendChild(name);
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "status-btn";
+      btn.dataset.status = st;
+      btn.textContent = STATUS_LABEL[st];
+      btn.title = "Click to change status";
+      btn.addEventListener("click", function(){
+        var i = STATUSES.indexOf(state[r._key]);
+        state[r._key] = STATUSES[(i + 1) % STATUSES.length];
+        render(); persist();
+      });
+      row.appendChild(btn);
+      card.appendChild(row);
+      if (r.note){
+        var note = document.createElement("div");
+        note.className = "course-note";
+        note.textContent = r.note;
+        card.appendChild(note);
+      }
+      list.appendChild(card);
+    });
+    document.getElementById("reqMeta").textContent = done + " / " + REQUIREMENTS.length + " complete";
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

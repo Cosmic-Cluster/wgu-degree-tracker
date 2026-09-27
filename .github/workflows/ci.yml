@@ -1,0 +1,84 @@
+# ============================================================================
+# CI for wgu-degree-tracker. Four independent jobs, so one failing doesn't hide
+# the others:
+#   lint     ESLint over the JS, including inline <script>s in the HTML pages
+#   test     parser unit tests (no PDFs needed) + security guard + config schema
+#   secrets  gitleaks over the full git history
+#   audit    npm audit over the dev dependencies
+#
+# The tracker itself has no build and no runtime dependencies. Everything npm
+# installs here is developer tooling only.
+#
+# Actions are pinned to full commit SHAs (tag in the comment) so a moved or
+# hijacked tag can't change what runs. Update them deliberately.
+#
+# The audit job has NO allowlist on purpose. See DECISIONS.md ("No pre-emptive
+# suppression"): a known finding is recorded when CI actually reports it, in
+# the commit that responds to that run, not before.
+# ============================================================================
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege: nothing here writes to the repo.
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      # --omit=optional skips canvas (a native module pdf.js can use for
+      # rendering). Lint and unit tests never render, so it isn't needed.
+      - run: npm ci --omit=optional
+      - run: npm run lint
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --omit=optional
+      # Unit tests (incl. the CVE-2024-4367 mitigation guard) + config schema.
+      # The real-PDF regression tests (npm run test:guides) need WGU's Program
+      # Guide PDFs, which aren't in the repo, so they run locally only.
+      - run: npm test
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # full history, so secrets in old commits are found too
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # No GITLEAKS_LICENSE: only required for organization-owned repos.
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      # Audits package-lock.json, which includes optional and dev packages, so
+      # nothing is scoped out. Fails on any advisory of any severity.
+      - run: npm audit

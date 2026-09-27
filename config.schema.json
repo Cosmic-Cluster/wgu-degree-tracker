@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Cosmic-Cluster/wgu-degree-tracker/config.schema.json",
+  "title": "WGU Degree Tracker config",
+  "description": "Shape of window.WGU_TRACKER_CONFIG in config.js. config.js is JavaScript, not JSON: it is `window.WGU_TRACKER_CONFIG = { ... };`. The object inside must match this schema. See config.example.js for a commented example and AI-GUIDE.md for how to fill it in.",
+  "type": "object",
+  "required": ["programName", "courses"],
+  "additionalProperties": false,
+  "properties": {
+    "eyebrow":     { "type": "string", "description": "Small caps line above the title, e.g. \"WGU · Master of Science, Cybersecurity and Information Assurance\"." },
+    "programName": { "type": "string", "minLength": 1, "description": "Page title." },
+    "goalNote":    { "type": "string", "description": "Optional text appended to the subtitle, e.g. \"goal: finish in 2 terms\"." },
+    "footerNote":  { "type": "string" },
+    "storageKey":  { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "Key for saved progress in the browser. Changing it later makes existing progress invisible (it isn't deleted). Defaults to a slug of programName." },
+
+    "ratePerTerm": { "type": "number", "minimum": 0, "description": "Tuition per term in US dollars. 0 or omitted hides the Budget card." },
+    "termMonths":  { "type": "integer", "minimum": 1, "default": 6 },
+    "startDate":   { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "Planned start, YYYY-MM-DD, or null." },
+
+    "planOptions": {
+      "type": "array",
+      "description": "Budget-card toggle. First entry is selected by default. Usually the planned term count first, then fewer-term stretches.",
+      "items": {
+        "type": "object",
+        "required": ["value", "label", "terms"],
+        "additionalProperties": false,
+        "properties": {
+          "value": { "type": "string" },
+          "label": { "type": "string" },
+          "terms": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+
+    "notes": {
+      "type": "array",
+      "description": "Collapsible callouts under the header. html is inserted as-is, so only put trusted, simple HTML here.",
+      "items": {
+        "type": "object",
+        "required": ["html"],
+        "additionalProperties": false,
+        "properties": {
+          "mark":  { "type": "string", "maxLength": 2 },
+          "color": { "type": "string", "description": "CSS color, usually a variable like var(--money)." },
+          "bg":    { "type": "string" },
+          "html":  { "type": "string" }
+        }
+      }
+    },
+
+    "requirements": {
+      "type": "array",
+      "description": "Things the program needs that are NOT courses and carry no CUs (content exams, state licensure steps, background checks).",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "additionalProperties": false,
+        "properties": {
+          "id":   { "type": "string", "pattern": "^[a-z0-9-]+$", "description": "Stable id; progress is saved under it. Don't change once in use." },
+          "name": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      }
+    },
+
+    "courses": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/course" }
+    }
+  },
+
+  "$defs": {
+    "course": {
+      "type": "object",
+      "required": ["term", "name", "cu"],
+      "additionalProperties": false,
+      "properties": {
+        "term":     { "type": "integer", "minimum": 1, "description": "The student's planned term for this course, not WGU's." },
+        "code":     { "type": "string", "description": "WGU course code like D482, or \"\" if unknown. Progress is saved by code, or by name when there's no code, so changing either after starting loses that course's progress." },
+        "name":     { "type": "string", "minLength": 1 },
+        "cu":       { "type": "integer", "minimum": 0, "description": "Competency units." },
+        "prereq":   { "type": "string", "description": "Free-text prerequisite note." },
+        "notes":    { "type": "array", "items": { "type": "string" }, "description": "Extra note lines shown under the course." },
+        "cert":     { "type": ["string", "null"], "description": "A certification that ALREADY satisfied this course by transfer (shows a badge). Use notes, not this field, for 'aligned with' or 'could transfer'." },
+        "transfer": { "type": "boolean", "default": false, "description": "true = already satisfied by transfer credit; no tracking." },
+        "inPerson": {
+          "enum": [null, "Clinical", "Lab", "Student teaching", "Field experience"],
+          "description": "In-person part of the course. The course isn't complete until this part is. Students can also set it on the course card."
+        },
+        "assess": {
+          "type": "object",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type":  { "enum": ["unknown", "objective", "performance", "n/a"], "description": "objective = OA (proctored exam), performance = PA (paper/project), n/a = transfer course. Program Guides never state this: use unknown unless a source says otherwise." },
+            "guess": { "type": "boolean", "default": false, "description": "true when the type comes from an unofficial source or inference, not WGU. Shows an '(unconfirmed)' pill." },
+            "tasks": { "type": "integer", "minimum": 0, "maximum": 9, "description": "Default task count for a performance assessment." }
+          }
+        },
+        "prep": {
+          "type": "array",
+          "description": "Optional 'How to prepare' boxes.",
+          "items": {
+            "type": "object",
+            "required": ["url", "notes"],
+            "additionalProperties": false,
+            "properties": {
+              "url":    { "type": "string", "format": "uri" },
+              "source": { "type": "string", "description": "Who wrote it and whether it's official." },
+              "notes":  { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}
