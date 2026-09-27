@@ -6,12 +6,14 @@
   "scripts": {
     "lint": "eslint .",
     "test": "node setup/test/unit-tests.js && node setup/test/validate-configs.js",
-    "test:guides": "node setup/test/run-tests.js"
+    "test:guides": "node setup/test/run-tests.js",
+    "audit": "audit-ci --config audit-ci.jsonc"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
+    "audit-ci": "7.1.0",
     "eslint": "^9.39.5",
     "eslint-plugin-html": "^8.2.1",
     "globals": "^17.12.0",

@@ -49,4 +49,4 @@ If someone tricked a student into loading a malicious PDF *and* found a way arou
 ### For maintainers
 
 - **Dependabot alert:** dismiss it with reason **"Risk is tolerable"** and a note linking this section. Don't leave it open.
-- **CI:** if you add an `npm audit` job, allowlist exactly this advisory (`GHSA-wgrm-67xf-hhpq`) with a comment linking here, rather than disabling audit. Plain `npm audit` has no per-advisory ignore, so use a wrapper that supports an allowlist (e.g. `audit-ci`). Don't let the job fail on every push for a decision that's already made, and don't silence everything else along with it.
+- **CI:** the audit job runs `npm run audit` (audit-ci). Its allowlist in `audit-ci.jsonc` contains exactly this advisory, scoped to `pdfjs-dist`, and links the CI run that first reported it ([run 36348495566](https://github.com/Cosmic-Cluster/wgu-degree-tracker/actions/runs/36348495566)). Any other advisory, or this one on another package, still fails the build. Only add an entry in the commit that responds to the run that reported it.

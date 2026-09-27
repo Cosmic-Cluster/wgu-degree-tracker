@@ -1,0 +1,21 @@
+// audit-ci configuration: `npm audit` with an explicit, reviewed allowlist.
+// Run with `npm run audit` (CI's audit job does exactly this).
+//
+// Fails on ANY advisory of ANY severity except the entries below. Each entry
+// is scoped to one advisory AND one package path, so the same advisory
+// appearing somewhere else, or any new advisory, still fails the build.
+{
+  "$schema": "https://github.com/IBM/audit-ci/raw/main/docs/schema.json",
+  "low": true,
+  "allowlist": [
+    // CVE-2024-4367 in pdfjs-dist 3.11.174: accepted risk, mitigated.
+    // Finding first reported by CI run 36348495566 (2026-09-27):
+    //   https://github.com/Cosmic-Cluster/wgu-degree-tracker/actions/runs/36348495566
+    // Why it's kept, the mitigation (isEvalSupported: false, enforced by
+    // setup/test/security-guard.js) and revisit triggers: SECURITY.md.
+    "GHSA-wgrm-67xf-hhpq|pdfjs-dist"
+  ],
+  // Report allowlist entries that no longer match anything, so a stale
+  // exception gets noticed and removed (e.g. after a pdf.js upgrade).
+  "show-not-found": true
+}

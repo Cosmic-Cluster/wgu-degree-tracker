@@ -12,9 +12,9 @@
 # Actions are pinned to full commit SHAs (tag in the comment) so a moved or
 # hijacked tag can't change what runs. Update them deliberately.
 #
-# The audit job has NO allowlist on purpose. See DECISIONS.md ("No pre-emptive
-# suppression"): a known finding is recorded when CI actually reports it, in
-# the commit that responds to that run, not before.
+# The audit job's allowlist (audit-ci.jsonc) only ever gains an entry in the
+# commit that responds to the CI run that reported the finding; see
+# DECISIONS.md ("No pre-emptive suppression").
 # ============================================================================
 name: CI
 
@@ -93,6 +93,11 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
-      # Audits package-lock.json, which includes optional and dev packages, so
-      # nothing is scoped out. Fails on any advisory of any severity.
-      - run: npm audit
+          cache: npm
+      - run: npm ci --omit=optional
+      # npm audit via audit-ci: fails on any advisory of any severity, except
+      # the reviewed, package-scoped entries in audit-ci.jsonc (each links the
+      # CI run that first reported it and its rationale in SECURITY.md).
+      # The audit itself reads package-lock.json, so optional and dev packages
+      # are still audited even though --omit=optional skips installing them.
+      - run: npm run audit
