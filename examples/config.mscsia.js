@@ -8,6 +8,9 @@
 // Where the data comes from:
 //   - Courses, CUs, standard-path terms, prerequisites and certification
 //     alignments: the MSCSIA Program Guide, catalog 202610 (published 6/1/2026).
+//   - Transfer requirements: WGU's partner transfer pages (as of Sep 2026):
+//     https://partners.wgu.edu/master-of-science-in-cyber-security-and-information-assurance
+//     https://partners.wgu.edu/general-transfer-guidelines
 //   - Assessment types and "How to prepare" notes: unofficial student sources,
 //     linked per course. Anything not confirmed by WGU is marked
 //     guess: true, which shows a dashed "(unconfirmed)" pill in the tracker.
@@ -42,7 +45,7 @@ window.WGU_TRACKER_CONFIG = {
   notes: [
     {
       mark: "✓",
-      html: "<p><strong>Certifications can transfer in.</strong> WGU's Transfer and Non-Transfer Credit table for this program lists CompTIA CySA+ for Security Operations (D483), CompTIA PenTest+ for Penetration Testing (D484), and CompTIA SecurityX / CASP+ for Cybersecurity Architecture and Engineering (D488). If yours is accepted, set <code>transfer: true</code> on that course in config.js. Confirm eligibility and timing with your enrollment counselor.</p>"
+      html: "<p><strong>Five courses (18 CUs) can be satisfied by transfer:</strong> D483, D484, D488 and D489 by certification, and E121 by a graduate course. Each course's accepted certifications are listed on its card below. If WGU accepts yours, set <code>transfer: true</code> on that course in config.js.</p><p>Requirements change, so check the current list on WGU's <a href=\"https://partners.wgu.edu/master-of-science-in-cyber-security-and-information-assurance\" target=\"_blank\" rel=\"noopener noreferrer\">MSCSIA transfer page</a> and the <a href=\"https://partners.wgu.edu/general-transfer-guidelines\" target=\"_blank\" rel=\"noopener noreferrer\">general transfer guidelines</a> (rules on certification status and timing live there), and confirm with your enrollment counselor.</p>"
     },
     {
       mark: "?", color: "var(--money)", bg: "var(--money-soft)",
@@ -106,7 +109,10 @@ window.WGU_TRACKER_CONFIG = {
     {
       term: 2, code: "D483", name: "Security Operations", cu: 4,
       prereq: "Needs E123 and D482 done first",
-      notes: ["Aligned with CompTIA CySA+ (per the Program Guide). WGU's transfer table lists CySA+ as satisfying this course."],
+      notes: [
+        "Aligned with CompTIA CySA+ (per the Program Guide).",
+        "Transfer (per WGU's MSCSIA transfer page, Sep 2026): one of CompTIA CySA+; or CSIS Stackable CompTIA Infrastructure Specialist (A+/Network+/Security+) with Cloud+; or Cisco CCNA Cybersecurity (formerly Certified Cybersecurity Associate); or Cisco CCNP (formerly Certified Cybersecurity Professional) WITH CompTIA Cloud+; or EC-Council ECIH; or GIAC Certified Incident Handler (GCIH)."
+      ],
       cert: null, transfer: false, inPerson: null,
       assess: { type: "unknown", guess: false, tasks: 1 }
     },
@@ -128,14 +134,20 @@ window.WGU_TRACKER_CONFIG = {
     {
       term: 3, code: "D484", name: "Penetration Testing", cu: 4,
       prereq: "Needs E123, D482 and D483 done first",
-      notes: ["Aligned with CompTIA PenTest+ (per the Program Guide). WGU's transfer table lists PenTest+ as satisfying this course."],
+      notes: [
+        "Aligned with CompTIA PenTest+ (per the Program Guide).",
+        "Transfer (per WGU's MSCSIA transfer page, Sep 2026): one of CompTIA PenTest+; EC-Council CEH; Offensive Security OSCP+ or OSCE(3); or GIAC GPEN."
+      ],
       cert: null, transfer: false, inPerson: null,
       assess: { type: "unknown", guess: false, tasks: 1 }
     },
     {
       term: 3, code: "D488", name: "Cybersecurity Architecture and Engineering", cu: 4,
       prereq: "Needs D484 and D485 done first",
-      notes: ["Aligned with CompTIA SecurityX (per the Program Guide). WGU's transfer table lists SecurityX / CASP+ as satisfying this course."],
+      notes: [
+        "Aligned with CompTIA SecurityX (per the Program Guide).",
+        "Transfer (per WGU's MSCSIA transfer page, Sep 2026): CompTIA SecurityX (CASP+)."
+      ],
       cert: null, transfer: false, inPerson: null,
       assess: { type: "unknown", guess: false, tasks: 1 }
     },
@@ -148,7 +160,10 @@ window.WGU_TRACKER_CONFIG = {
     {
       term: 4, code: "D489", name: "Cybersecurity Management", cu: 4,
       prereq: "Needs D488 done first",
-      notes: ["Aligned with ISACA CISM (per the Program Guide)."],
+      notes: [
+        "Aligned with ISACA CISM (per the Program Guide).",
+        "Transfer (per WGU's MSCSIA transfer page, Sep 2026): ISACA CISM."
+      ],
       cert: null, transfer: false, inPerson: null,
       assess: { type: "performance", guess: true, tasks: 1 },
       prep: [{
@@ -166,7 +181,10 @@ window.WGU_TRACKER_CONFIG = {
     {
       term: 4, code: "E121", name: "Governance, Risk, and Compliance in the Age of Artificial Intelligence", cu: 2,
       prereq: "Needs all prerequisite courses above done first",
-      notes: ["Aligned with ISACA AAISM (per the Program Guide)."],
+      notes: [
+        "Aligned with ISACA AAISM (per the Program Guide).",
+        "Transfer (per WGU's MSCSIA transfer page, Sep 2026): one graduate-level course, equivalent to 2 units, in governance, risk, and compliance in Artificial Intelligence (AI). No certification is listed for this course."
+      ],
       cert: null, transfer: false, inPerson: null,
       assess: { type: "unknown", guess: false, tasks: 1 }
     },
