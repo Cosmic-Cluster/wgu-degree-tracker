@@ -13,7 +13,7 @@ This is a running log. Newest entries go at the bottom. Each entry says what was
 ### pdf.js 3.11.174 (legacy build), vendored in `setup/vendor/pdfjs/`
 - **Why v3, not v4/v5:** v4+ ships only as ES modules. Browsers refuse to load module scripts from `file://` pages, so double-clicking `setup.html` would break. v3 ships classic `<script>` files.
 - **Why the worker is loaded as a plain `<script>`:** browsers also block Web Workers on `file://`. Loading `pdf.worker.min.js` as a script makes pdf.js run on the main thread instead. That's slower, but a 20-page guide still parses in well under a second.
-- **Security:** v3.11.174 is affected by CVE-2024-4367 (code execution through a crafted font), which is fixed in 4.2.67. The documented mitigation is `isEvalSupported: false`, and `setup.html` always passes it, plus `disableFontFace: true`. The input is also a PDF the student downloaded from WGU themselves. **If a v3 release with the fix ever ships, or `file://` stops mattering, upgrade.**
+- **Security:** v3.11.174 is affected by CVE-2024-4367 (code execution through a crafted font), which is fixed in 4.2.67. The documented mitigation is `isEvalSupported: false`, and `setup.html` always passes it, plus `disableFontFace: true`. The page can't verify where a PDF came from, so provenance isn't a control. Two things lower the likelihood: it only opens a file the student picks themselves, never one fetched automatically or by URL, and there's no server, login or stored secret behind it. *(Corrected 2026-10-06; see the entry at the bottom.)* **If a v3 release with the fix ever ships, or `file://` stops mattering, upgrade.**
 - **Vendored, not CDN:** CDN loading would need internet and would pull code at runtime from a third party. Apache-2.0 licence is copied alongside.
 
 ### Parse the "Standard Path" table by text position, not plain text
@@ -167,3 +167,12 @@ This is a running log. Newest entries go at the bottom. Each entry says what was
 - **Verified before committing:** passes on the real lockfile (exit 0). With the canvas override removed, which brings the tar advisories back, it **fails** (exit 1). So the allowlist doesn't mask anything beyond this one advisory. Adding audit-ci introduced no new advisories.
 - **Not done:** `npm audit fix --force` (suggested by npm). It would install pdfjs-dist 6.x, which can't load from file://. Never run it on this repo.
 - **Dependabot:** if an alert opens for the same advisory, dismiss it as "Risk is tolerable" with a link to SECURITY.md at that time, per "No pre-emptive suppression". Not before.
+
+---
+
+## 2026-10-06: Correction: PDF provenance is not a control
+
+- The Phase 1 pdf.js entry said "The input is also a PDF the student downloaded from WGU themselves." That overstated it. The setup page opens whatever PDF the user picks and has no way to check its origin: WGU doesn't sign its guides, and a hash list would break whenever a guide is updated. The parser's "Is it a WGU Program Guide?" warning runs only after pdf.js has already read the file, so it isn't a security check either.
+- Corrected the sentence in place and marked it. SECURITY.md already had the accurate wording ("a PDF the student chose themselves, normally their own Program Guide") and is unchanged.
+- How to describe the risk correctly: the **control** is `isEvalSupported: false`, enforced by a test. User-selected input and the lack of any server or stored secret are **likelihood and impact reducers**, not controls.
+- First change made through a pull request, now that `main` requires one.
