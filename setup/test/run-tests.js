@@ -27,6 +27,10 @@ const expected = require('./expected.json');
     else console.log(`ok    security: ${r.file} (eval disabled on ${r.calls} getDocument call(s))`);
   }
 
+  const vendorProblems = require('./security-guard.js').checkVendoredPdfjs();
+  if (vendorProblems.length) { failures++; vendorProblems.forEach(m => console.log(`FAIL  security: ${m}`)); }
+  else console.log('ok    security: bundled pdf.js matches the pinned devDependency, byte for byte');
+
   for (const [file, exp] of Object.entries(expected)) {
     if (file.startsWith('_')) continue;
     const full = path.join(dir, file);

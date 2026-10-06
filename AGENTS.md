@@ -16,4 +16,6 @@ Instructions for AI coding agents working in this repository.
   - `npm run lint`: ESLint, including inline scripts in the HTML pages
   - `npm test`: PDF-free parser unit tests, the security guard, and schema validation of `config.example.js` + `examples/`. This is what CI runs.
   - `npm run test:guides -- "<folder of Program Guide PDFs>"`: real-PDF regression tests (local only; PDFs aren't in the repo). Run before merging parser changes. Expected results are in `setup/test/expected.json`.
-- `run-tests.js` also enforces that every pdf.js `getDocument()` call passes `isEvalSupported: false`. That's the mitigation for CVE-2024-4367 (see SECURITY.md). Never remove it.
+- `setup/test/security-guard.js` (run by `npm test`) enforces two things. Never remove or weaken either:
+  - every pdf.js `getDocument()` call passes `isEvalSupported: false`, the mitigation for CVE-2024-4367 (see SECURITY.md)
+  - the bundled pdf.js in `setup/vendor/pdfjs/` is byte-identical to the pinned `pdfjs-dist` devDependency. To upgrade pdf.js, replace both together.

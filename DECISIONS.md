@@ -176,3 +176,26 @@ This is a running log. Newest entries go at the bottom. Each entry says what was
 - Corrected the sentence in place and marked it. SECURITY.md already had the accurate wording ("a PDF the student chose themselves, normally their own Program Guide") and is unchanged.
 - How to describe the risk correctly: the **control** is `isEvalSupported: false`, enforced by a test. User-selected input and the lack of any server or stored secret are **likelihood and impact reducers**, not controls.
 - First change made through a pull request, now that `main` requires one.
+
+---
+
+## 2026-10-06: Dependabot alert #1, EPSS, and a guard against "fixing" the wrong copy
+
+### Reviewed the acceptance with EPSS in view
+- Dependabot raised alert #1 for GHSA-wgrm-67xf-hhpq (CVSS 8.8, **EPSS 70.66%, 99th percentile**). SECURITY.md hadn't mentioned EPSS, so the earlier acceptance hadn't visibly considered that this CVE is exploited in the wild.
+- Maintainer's assessment: the high EPSS reflects apps that render attacker-supplied PDFs with data behind them. Here pdf.js is loaded only by the one-time setup page (never by the tracker), the user picks a local file, nothing is stored or sent, and the advisory's workaround is applied and test-enforced. Risk remains accepted.
+- SECURITY.md now records the EPSS score and review date, where and for how long pdf.js runs, and three residual-risk items stated plainly: saved progress, the `config.js` output being code the tracker later runs, and shared origin when hosted on GitHub Pages.
+- The alert is dismissed only **after** this change merges, so the dismissal note points at documentation that already says everything it relies on.
+
+### New test: the bundled pdf.js must match the devDependency, byte for byte
+- **The trap:** Dependabot's "Create security update" would raise only the `pdfjs-dist` devDependency to ≥4.2.67. CI's unit tests didn't load pdf.js, so that change would probably have gone green. Merging it would close the alert as "fixed" while the bundled copy users run stayed at 3.11.174.
+- **The guard:** `checkVendoredPdfjs()` in `setup/test/security-guard.js`, run by `npm test`. It requires an exact pinned version in `package.json`, the same version in `package-lock.json`, `VERSION.txt` and the bundled file's own version string, and that `pdf.min.js` and `pdf.worker.min.js` are byte-identical to the installed npm release.
+- A side benefit: it proves the bundled files are the unmodified official release (they were confirmed identical on 2026-10-06).
+- **Verified both ways:** passes on the real repo. Fails when only the devDependency is bumped to 4.2.67, and fails when one byte is appended to the bundled `pdf.min.js`.
+- Needs `pdfjs-dist` installed, which `npm ci --omit=optional` does in CI.
+
+### GitHub repository settings (not stored in the repo, so recorded here)
+- **Private vulnerability reporting:** on. SECURITY.md directs reporters to it.
+- **Dependabot alerts:** on (with the dependency graph). **Automatic security updates:** keep off, for the reason above.
+- **GitHub preset "Dismiss low-impact alerts for development-scoped dependencies":** turned **off**. Every npm package here is dev-scoped, and the preset's assumption (dev packages never reach users) is false for pdf.js, whose bundled copy runs in students' browsers. It also conflicts with "No pre-emptive suppression".
+- **Ruleset `protect-main`** (active, no bypass): pull request required (0 approvals, since a solo maintainer can't approve their own), required status checks `lint`, `test`, `secrets`, `audit` from GitHub Actions, branch must be up to date, no force-pushes, no deletion. First change through it was pull request #1.

@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 const parser = require('../parse-guide.js');
-const { checkEvalDisabled } = require('./security-guard.js');
+const { checkEvalDisabled, checkVendoredPdfjs } = require('./security-guard.js');
 
 // ---- tiny test runner -------------------------------------------------------
 let passed = 0, failed = 0;
@@ -69,6 +69,11 @@ function textPage(lines) {
 
 test('security: every pdf.js getDocument() call disables eval (CVE-2024-4367)', () => {
   for (const r of checkEvalDisabled()) assert.ok(r.ok, `${r.file} is missing isEvalSupported: false`);
+});
+
+test('security: bundled pdf.js matches the pinned devDependency, byte for byte', () => {
+  const problems = checkVendoredPdfjs();
+  assert.deepStrictEqual(problems, [], problems.join('; '));
 });
 
 test('basic table: names, CUs, terms, total check', () => {
